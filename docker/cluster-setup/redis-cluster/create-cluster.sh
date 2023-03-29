@@ -1,0 +1,1 @@
+redis-cli --cluster create db-1:7000 db-2:7000 db-3:7000 db-4:7000 db-5:7000 db-6:7000 --cluster-replicas 1
