@@ -14,7 +14,7 @@ import "github.com/anishathalye/porcupine"
 func main() {
     fmt.Println("Hello, World!")
 
-	//parseJepsenHistory("example_history.txt")
+	parseJepsenHistory("example_history.txt")
 	
 	events := getKeyValueExampleEvents() //getAppendExampleEvents()
 	registerModel := getKeyValueModel() //getAppendModel()

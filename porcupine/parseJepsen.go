@@ -6,6 +6,7 @@ import "bufio"
 import "io"
 import "regexp"
 import "strconv"
+import "strings"
 
 import "github.com/anishathalye/porcupine"
 
@@ -20,6 +21,9 @@ func parseJepsenHistory(filename string) []porcupine.Event {
 	reader := bufio.NewReader(file)
 
 	parseLine, _ := regexp.Compile(`^(\d+)\s+:(\w+)\s+:(\w+)\s+(.*?)(\s:(.*?))?$`)
+	unwrapArray, _ := regexp.Compile(`^\[\[(.*?)]]$`)
+	parseRead, _ := regexp.Compile(`^:r (.*?) (.*?)$`)
+	parseAppend, _ := regexp.Compile(`^:append (.*?) (.*?)$`)
 
 	var events []porcupine.Event = nil
 
@@ -43,7 +47,8 @@ func parseJepsenHistory(filename string) []porcupine.Event {
 			proc, _ := strconv.Atoi(args[1])
 			switch args[2] {
 			case "invoke":
-				fmt.Println(id, proc, "start", args[4])
+				unwraped_commands := strings.Split(unwrapArray.FindStringSubmatch(args[4])[1], "] [")
+				fmt.Println(id, proc, "start", args[4], len(unwraped_commands), unwraped_commands)
 				procIdMap[proc] = id
 				id++
 			case "ok":
