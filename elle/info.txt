@@ -1,0 +1,14 @@
+clojars repl: clj
+install Graphviz else file not found exeption
+
+example:
+
+(require '[elle.list-append :as a]
+            '[jepsen.history :as h])
+
+(def h (h/history
+            [{:process 0, :type :ok, :value [[:append :x 1] [:r :y [1]]]}
+             {:process 1, :type :ok, :value [[:append :x 2] [:append :y 1]]}
+             {:process 2, :type :ok, :value [[:r :x [1 2]]]}]))
+
+(pprint (a/check {:consistency-models [:serializable], :directory "out"} h))

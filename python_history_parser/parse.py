@@ -1,14 +1,19 @@
 import edn_format #pip install edn_format
 from edn_format import Keyword
+from simple_droped_append import *
+from linear_droped_append import *
+from fail_analysis import *
 
-def parse():
-    inputfile = open('history.edn')
+def parse(file_name):
+    inputfile = open(file_name)
     
     print("start parsing")
     
     history = []
     for line in inputfile.readlines():
-        history.append(edn_format.loads(line))
+        edn_line = edn_format.loads(line)
+        if edn_line is not None:
+            history.append(edn_line)
     
     print("parsing done")
     
@@ -43,7 +48,16 @@ def verify_this_order(history):
     return True
 
 def main():
-    history = parse()
+
+    history = parse("test_history.edn")
+    analyse_fails(history)
+    storage = track_linear_droped_append(history)
+    print(storage)
+    analyse_simple_droped_append(storage)
+
+    return 0
+
+    history = parse('history.edn')
     ok_hist = filter_successfull(history)
     # only requests form node 0 seem to execute successfuly, the others all fail
     
