@@ -1,6 +1,6 @@
-(ns jepsen.redis-like-test
+(ns jepsen.redislike-test
   (:require [clojure.test :refer :all]
-            [jepsen.redis-like :refer :all]))
+            [jepsen.redislike :refer :all]))
 
 (deftest a-test
   (testing "FIXME, I fail."

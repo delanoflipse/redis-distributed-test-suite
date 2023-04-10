@@ -1,5 +1,5 @@
-(ns jepsen.redis-like
-  (:require [clojure.tools.logging :refer :all]
+(ns jepsen.redislike.database
+  (:require [clojure.tools.logging :refer [info warn]]
             [clojure.string :as str]
             [jepsen [cli :as cli]
              [control :as c]
@@ -9,6 +9,7 @@
             [jepsen.control.util :as cu]
             [jepsen.control.net :as net]
             [jepsen.os.debian :as debian]))
+
 
 (def dir     "/opt/redis")
 (def node-port     7000)
@@ -89,8 +90,7 @@ appendonly yes
               ; Initialize the cluster on the primary
          (let [nodes-urls (str/join " " (map node-hostname! (:nodes test)))]
            (info "Creating primary cluster" nodes-urls)
-             (c/exec :redis-cli :--cluster :create (c/lit nodes-urls) :--cluster-yes)
-           )
+           (c/exec :redis-cli :--cluster :create (c/lit nodes-urls) :--cluster-yes))
               ; And join on secondaries.
          (info "Secondary setup?"))))
 
@@ -102,22 +102,3 @@ appendonly yes
     db/LogFiles
     (log-files [_ test node]
       [logfile])))
-
-(defn redis-test
-  "Given an options map from the command line runner (e.g. :nodes, :ssh,
-  :concurrency, ...), constructs a test map."
-  [opts]
-  (merge tests/noop-test
-         opts
-         {:name "redis-like"
-          :os   debian/os
-          :db   (db "redis" "vx.y.z" "cluster")
-          :pure-generators true}))
-
-(defn -main
-  "Handles command line arguments. Can either run a test, or a web server for
-  browsing results."
-  [& args]
-  (cli/run! (merge (cli/single-test-cmd {:test-fn redis-test})
-                   (cli/serve-cmd))
-            args))
