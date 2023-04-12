@@ -4,42 +4,96 @@
             [jepsen
              [control :as c]
              [core :as jepsen]
+             [util :as util]
              [db :as db]]
             [jepsen.redislike.util :as p-util]
             [jepsen.control.util :as cu]
-            [jepsen.os.debian :as debian]))
+            [jepsen.os.debian :as debian]
+            [slingshot.slingshot :refer [try+ throw+]]))
 
 
-(def dir     "/opt/redis")
+(def working-dir     "/opt/redis")
 (def node-port     7000)
 (def replicas-per-main     1)
 (def conf-file     "redis.conf")
 (def binary "redis-server")
 (def db-file        "redis.rdb")
-(def logfile (str dir "/db.log"))
-(def pidfile (str dir "/db.pid"))
+(def logfile (str working-dir "/db.log"))
+(def pidfile (str working-dir "/db.pid"))
 
-(def db-build-dir
-  "The remote directory where we deploy redis to"
-  (str dir "/build"))
+(def build-file
+  "A file we create to track the last built version; speeds up compilation."
+  "jepsen-built-version")
 
-;; TODO: make test specific
-(def db-source-url
-  "The source url to build the DB from"
-  "https://download.redis.io/redis-stable.tar.gz")
+(def checkout-root-dir "/repos")
+(def build-repository "https://github.com/redis/redis")
+(def build-repository-name "redis")
+(def build-repository-version "0a8a45f")
+
+;; generated files
+(def build-repository-path  (str checkout-root-dir "/" build-repository-name))
+(def build-full-path  (str build-repository-path "/" build-repository-version))
 
 (defn install-tools!
   "Installs prerequisite packages for building redis and redisraft."
   []
   (debian/install [:lsb-release :build-essential :cmake :libtool :autoconf :automake]))
 
+(defn checkout-repo!
+  "Clone a repository in directory ${checkout-root-dir}/${repo-name}/${version}"
+  []
+  (when-not (cu/exists? build-full-path)
+    (c/exec :mkdir :-p  build-repository-path)
+    (c/cd build-repository-path
+          (info "Cloning into" build-full-path)
+          (c/exec :git :clone build-repository build-repository-version))
+    (c/cd build-full-path
+          (info "Checking out latest version")
+          (try+ (c/exec :git :checkout build-repository-version)
+                (catch [:exit 1] e
+                  (if (re-find #"pathspec .+ did not match any file" (:err e))
+                    (do ; Ah, we're out of date
+                      (c/exec :git :fetch)
+                      (c/exec :git :checkout build-repository-version))
+                    (throw+ e)))))))
+
+(def build-locks
+  "We use these locks to prevent concurrent builds."
+  (util/named-locks))
+
+(defmacro with-build-version
+  [node repo-name version & body]
+  `(util/with-named-lock build-locks [~node ~repo-name]
+     (let [build-file# (str build-full-path "/" build-file)]
+       (if (try+ (= (str ~version) (c/exec :cat build-file#))
+                 (catch [:exit 1] e# ; Not found
+                   false))
+         ; Already built
+         (str build-full-path)
+         ; Build
+         (let [res# (do ~@body)]
+           ; Log version
+           (c/exec :echo ~version :> build-file#)
+           res#)))))
+
+(defn build-db!
+  "Compiles redis, and returns the directory we built in."
+  [node]
+  (with-build-version node build-repository-name build-repository-version
+    (do
+      (checkout-repo!)
+      (info "Building redis" build-repository-version)
+      (c/cd build-full-path
+            (c/exec :make))
+      )))
+
 (defn deploy-binaries!
   "Uploads binaries built from the given directory."
   [build-dir executables]
-  (c/exec :mkdir :-p dir)
+  (c/exec :mkdir :-p working-dir)
   (doseq [f executables]
-    (c/exec :cp (str build-dir "/src/" f) (str dir "/"))
-    (c/exec :chmod "+x" (str dir "/" f))))
+    (c/exec :cp (str build-dir "/src/" f) (str working-dir "/"))
+    (c/exec :chmod "+x" (str working-dir "/" f))))
 
 (defn db
   "Redis-like DB for a particular version."
@@ -51,21 +105,17 @@
       (c/su
        (info "installing tools")
        (install-tools!)
+       
+       (c/exec :mkdir :-p working-dir)
 
-       (info "creating directory")
-       (c/exec :mkdir :-p db-build-dir)
-
-       (info "downloading archive")
-       (cu/install-archive! db-source-url db-build-dir)
-
-       (info "building binaries")
-       (c/cd db-build-dir (c/exec :make))
+       (info "installing database")
+       (build-db! node)
 
        (info "setting up binaries as executables")
-       (deploy-binaries! db-build-dir  ["redis-server" "redis-cli"])
+       (deploy-binaries! build-full-path  ["redis-server" "redis-cli"])
 
        (info "writing config")
-       (c/cd dir
+       (c/cd working-dir
              (cu/write-file! "
 port 7000
 cluster-enabled yes
@@ -77,7 +127,7 @@ appendonly yes
        (cu/start-daemon!
         {:logfile logfile
          :pidfile pidfile
-         :chdir   dir}
+         :chdir   working-dir}
         binary
         conf-file
         :--protected-mode         "no"
@@ -92,8 +142,7 @@ appendonly yes
           ; Initialize the cluster on the primary
          (let [nodes-urls (str/join " " (map p-util/node-url (:nodes test) (repeat node-port)))]
            (info "Creating primary cluster" nodes-urls)
-           (c/cd dir
-                 (info (c/exec :ls :-al))
+           (c/cd working-dir
                  (c/exec (c/lit "./redis-cli") :--cluster :create (c/lit nodes-urls) :--cluster-yes :--cluster-replicas (c/lit (str replicas-per-main))))
            (info "Main init done, syncing...")
            (jepsen/synchronize test))
@@ -110,8 +159,7 @@ appendonly yes
     (teardown! [_ test node]
       (info node "tearing down DB")
       (cu/stop-daemon! binary pidfile)
-      (c/su (c/exec :rm :-rf dir))
-               )
+      (c/su (c/exec :rm :-rf working-dir)))
 
     db/LogFiles
     (log-files [_ test node]
