@@ -15,8 +15,8 @@
             [jepsen.os.debian :as debian]
             [jepsen.redislike.nemesis :as redisnemesis]))
 
-(defn r   [_ _] {:type :invoke, :f :read, :value nil})
-(defn append   [_ _] {:type :invoke, :f :write, :value (rand-int 5)})
+(defn r   [_ _] {:type :invoke, :f :read, :key (rand-int 5), :value nil})
+(defn append   [_ _] {:type :invoke, :f :write, :key (rand-int 5), :value (rand-int 5)})
 
 (defn elle-checker
   "wrapper around elle so jepsen can use it"
@@ -37,15 +37,16 @@
           :client (client/->RedisClient nil)
           :generator       (->> (gen/mix [r append])
                                 (gen/stagger 1)
-                                ;; (gen/nemesis (db-nemesis/nemesisgenerator))
-                                (gen/nemesis nil)
+                                (gen/nemesis
+                                 (redisnemesis/nemesisgenerator))
                                 (gen/time-limit 15))
           :pure-generators true
-          ;; :nemesis (redisnemesis/nemesisoptions)
+          :nemesis (redisnemesis/nemesisoptions)
           :checker (checker/compose {:perf        (checker/perf)
                                      :timeline    (timeline/html)
                                      :stats       (checker/stats)
-                                     :elle        (elle-checker)})}))
+                                     ;; :elle        (elle-checker)
+                                     })}))
 
 ;; TODO: automate node count
 (defn -main
