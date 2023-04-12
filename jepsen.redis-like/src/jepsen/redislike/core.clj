@@ -10,7 +10,7 @@
             [jepsen.os.debian :as debian]))
 
 (defn r   [_ _] {:type :invoke, :f :read, :value nil})
-(defn w   [_ _] {:type :invoke, :f :write, :value (str (rand-int 5))})
+(defn append   [_ _] {:type :invoke, :f :write, :value (rand-int 5)})
 
 (defn redis-test
   "Given an options map from the command line runner (e.g. :nodes, :ssh,
@@ -22,12 +22,13 @@
           :os   debian/os
           :db   (db-def/db "redis" "vx.y.z" "cluster")
           :client (client/->RedisClient nil)
-          :generator       (->> (gen/mix [r w])
+          :generator       (->> (gen/mix [r append])
                                 (gen/stagger 1)
                                 (gen/nemesis nil)
                                 (gen/time-limit 15))
           :pure-generators true}))
 
+;; TODO: automate node count
 (defn -main
   "Handles command line arguments. Can either run a test, or a web server for
   browsing results."

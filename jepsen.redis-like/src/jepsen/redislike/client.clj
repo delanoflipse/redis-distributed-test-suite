@@ -5,6 +5,7 @@
             [taoensso.carmine [connections :as conn]]
             [jepsen
              [cli :as cli]
+             [util :as util :refer [parse-long]]
              [client :as jclient]]
             [slingshot.slingshot :refer [try+ throw+]]
             [jepsen.redislike.util :as p-util]
@@ -12,6 +13,7 @@
             [jepsen.redislike.database :as db-def]))
 
 (defrecord RedisClient [conn]
+  ;; TODO: error handling
   jepsen.client/Client
   (open! [this test node]
     (assoc this :conn (jedis/connect! (:nodes test) 7000)))
@@ -23,9 +25,9 @@
 
   (invoke! [this test op]
     (case (:f op)
-      :read (assoc op :type :ok, :value (.get conn "foo"))
+      :read (assoc op :type :ok, :value (mapv parse-long (.lrange conn "foo" 0 -1)))
       :write (do
-               (.set conn "foo" (:value op))
+               (.rpush conn "foo" (into-array String [(str (:value op))]))
                (assoc op :type :ok))))
 
   (teardown! [_ test]))
