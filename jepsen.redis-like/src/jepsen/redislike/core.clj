@@ -8,13 +8,12 @@
              [tests :as tests]]
             [jepsen.checker.timeline :as timeline]
             [jepsen.redislike
-             [database :as db-def]
-             [client :as db-client]]
-            [jepsen.os.debian :as debian] 
-            ))
+             [client :as client]
+             [database :as db-def]]
+            [jepsen.os.debian :as debian]))
 
 (defn r   [_ _] {:type :invoke, :f :read, :value nil})
-(defn w   [_ _] {:type :invoke, :f :write, :value (rand-int 5)})
+(defn append   [_ _] {:type :invoke, :f :write, :value (rand-int 5)})
 
 (defn elle-checker
   "wrapper around elle so jepsen can use it"
@@ -35,11 +34,11 @@
          {:name "redislike"
           :os   debian/os
           :db   (db-def/db "redis" "vx.y.z" "cluster")
-          ;; :client (db-client/Client. nil)
-          ;; :generator       (->> r
-          ;;                       (gen/stagger 1)
-          ;;                       (gen/nemesis nil)
-          ;;                       (gen/time-limit 15))
+          :client (client/->RedisClient nil)
+          :generator       (->> (gen/mix [r append])
+                                (gen/stagger 1)
+                                (gen/nemesis nil)
+                                (gen/time-limit 15))
           :pure-generators true
 		  :checker (checker/compose {
 		    :perf        (checker/perf)
@@ -49,6 +48,7 @@
 		  })
 		  }))
 
+;; TODO: automate node count
 (defn -main
   "Handles command line arguments. Can either run a test, or a web server for
   browsing results."

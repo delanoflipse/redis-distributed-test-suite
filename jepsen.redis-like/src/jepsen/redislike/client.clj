@@ -5,59 +5,29 @@
             [taoensso.carmine [connections :as conn]]
             [jepsen
              [cli :as cli]
-             [client :as client]]
+             [util :as util :refer [parse-long]]
+             [client :as jclient]]
             [slingshot.slingshot :refer [try+ throw+]]
             [jepsen.redislike.util :as p-util]
+            [jepsen.redislike.jedis :as jedis]
             [jepsen.redislike.database :as db-def]))
 
-
-
-(defrecord SingleConnectionPool [conn]
-  conn/IConnectionPool
-  (get-conn [_ spec] conn)
-
-  (release-conn [_ conn])
-
-  (release-conn [_ conn exception])
-
-  java.io.Closeable
-  (close [_] (conn/close-conn conn)))
-
-(defn open-con
-  "Opens a connection to a node. Our connections are Carmine IConnectionPools.
-  Options are merged into the conn pool spec."
-  ([node]
-   (open-con node {}))
-  ([node opts]
-   (let [spec (merge {:host       node
-                      :port       db-def/node-port
-                      :timeout-ms 10000}
-                     opts)
-         seed-pool (conn/conn-pool :none)
-         conn      (conn/get-conn seed-pool spec)]
-     {:pool (SingleConnectionPool. conn)
-      ; See with-txn
-      :in-txn? (atom false)
-      :spec spec})))
-
-(defn close-con!
-  "Closes a connection to a node."
-  [^java.io.Closeable conn]
-  (.close (:pool conn)))
-
-
-(defrecord Client [conn]
-  client/Client
+(defrecord RedisClient [conn]
+  ;; TODO: error handling
+  jepsen.client/Client
   (open! [this test node]
+    (assoc this :conn (jedis/connect! (:nodes test) 7000)))
 
-    (assoc this :conn (open-con node)))
-
+  (close! [this test]
+    (.close conn))
 
   (setup! [_ test])
 
-  (invoke! [_ test op])
+  (invoke! [this test op]
+    (case (:f op)
+      :read (assoc op :type :ok, :value (mapv parse-long (.lrange conn "foo" 0 -1)))
+      :write (do
+               (.rpush conn "foo" (into-array String [(str (:value op))]))
+               (assoc op :type :ok))))
 
-  (teardown! [_ test])
-
-  (close! [this test]
-    (close-con! conn)))
+  (teardown! [_ test]))
