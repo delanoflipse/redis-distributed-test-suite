@@ -13,25 +13,25 @@
 
 
 ;; running configuration
-(def replicas-per-main     1)
+(def replicas-per-main 1)
 
 ;; server configuration
 
 ;; REDIS
-;; (def conf-file "redis.conf")
-;; (def db-binary "redis-server")
-;; (def db-cli "redis-cli")
-;; (def build-repository "https://github.com/redis/redis")
-;; (def build-repository-name "redis")
-;; (def build-repository-version "0a8a45f")
+(def conf-file "redis.conf")
+(def db-binary "redis-server")
+(def db-cli "redis-cli")
+(def build-repository "https://github.com/redis/redis")
+(def build-repository-name "redis")
+(def build-repository-version "0a8a45f")
 
 ;; KEYDB
-(def conf-file "keydb.conf")
-(def db-binary "keydb-server")
-(def db-cli "keydb-cli")
-(def build-repository "https://github.com/Snapchat/KeyDB")
-(def build-repository-name "keydb")
-(def build-repository-version "478ed26")
+;; (def conf-file "keydb.conf")
+;; (def db-binary "keydb-server")
+;; (def db-cli "keydb-cli")
+;; (def build-repository "https://github.com/Snapchat/KeyDB")
+;; (def build-repository-name "keydb")
+;; (def build-repository-version "478ed26")
 
 ;; generic configuration
 (def working-dir "/opt/db")
