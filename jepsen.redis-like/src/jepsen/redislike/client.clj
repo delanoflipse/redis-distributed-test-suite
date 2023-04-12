@@ -69,11 +69,13 @@
 
   (invoke! [this test op]
     (with-exceptions op #{}
-      (let [op-key (str (:key op))]
+      (let [op-key (:key op)]
         (case (:f op)
-          :read (assoc op :type :ok, :key op-key, :value (mapv parse-long (.lrange conn op-key 0 -1)))
+          ;; read key
+          :read (assoc op :type :ok, :key op-key, :value (mapv parse-long (.lrange conn (str op-key) 0 -1)))
+          ;; append to key
           :write (do
-                   (.rpush conn op-key (into-array String [(str (:value op))]))
+                   (.rpush conn (str op-key) (into-array String [(str (:value op))]))
                    (assoc op :type :ok, :key op-key))))))
 
   (teardown! [_ test]))

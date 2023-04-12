@@ -22,12 +22,11 @@
     (setup! [this test] this)
 
     (invoke! [this test op]
-		(case (:f op)
-			:mytest
-			(do
-				(info "nemesis sayes hi")
-			)
-		)
+		(info "run nemesis")
+        (assoc op :value
+             (case (:f op)
+               :hold   nil
+             ))
 	)
 	
 	(teardown! [this test]))
@@ -35,18 +34,17 @@
 			
 (defn nemesisgenerator []
 	(cycle [(gen/sleep 5)
-            {:type :info, :f :split-start}
-            (gen/sleep 5)
-            {:type :info, :f :split-stop}])
-			{:type :info, :f :mytest}
+                                          {:type :info, :f :start}
+                                          (gen/sleep 5)
+                                          {:type :info, :f :stop}
+										  {:type :info, :f :hold}
+										  ]
+								  )
 )
 
 (defn nemesisoptions []
-    (nemesis/compose {
-	          {:split-start :start
-               :split-stop  :stop} (nemesis/partition-random-halves)
-              {:ring-start  :start
-               :ring-stop2  :stop} (nemesis/partition-majorities-ring)
-			  {:mytest      :mytest} (my-nemesis)
-    })
+    (nemesis/compose
+		{#{:start :stop} (nemesis/partition-random-halves)
+		#{:hold} (my-nemesis)}
+	)
 )

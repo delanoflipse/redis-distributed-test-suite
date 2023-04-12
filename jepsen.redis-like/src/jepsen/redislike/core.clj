@@ -37,15 +37,16 @@
           :client (client/->RedisClient nil)
           :generator       (->> (gen/mix [r append])
                                 (gen/stagger 1)
-                                (gen/nemesis (db-nemesis/nemesisgenerator))
-                                ;; (gen/nemesis nil)
+                                (gen/nemesis
+                                 (redisnemesis/nemesisgenerator))
                                 (gen/time-limit 15))
           :pure-generators true
           :nemesis (redisnemesis/nemesisoptions)
           :checker (checker/compose {:perf        (checker/perf)
                                      :timeline    (timeline/html)
                                      :stats       (checker/stats)
-                                     :elle        (elle-checker)})}))
+                                     ;; :elle        (elle-checker)
+                                     })}))
 
 ;; TODO: automate node count
 (defn -main
