@@ -12,6 +12,7 @@
             [jepsen.redislike.jedis :as jedis]
             [jepsen.redislike.database :as db-def]))
 
+;; TODO: extend with actually occurring errors
 (defmacro with-exceptions
   "Takes an operation, an idempotent :f set, and a body; evaluates body,
   converting known exceptions to failed ops."
@@ -57,7 +58,6 @@
              (assoc ~op :type crash#, :error :socket-timeout)))))
 
 (defrecord RedisClient [conn]
-  ;; TODO: error handling
   jepsen.client/Client
   (open! [this test node]
     (assoc this :conn (jedis/connect! (:nodes test) 7000)))
