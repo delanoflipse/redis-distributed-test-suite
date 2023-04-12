@@ -2,6 +2,7 @@
   (:require [clojure.tools.logging :refer [info warn]]
             [elle.list-append :as a]
             [jepsen
+			 [control :as c]
              [checker :as checker]
              [cli :as cli]
              [generator :as gen]
@@ -26,25 +27,35 @@
         (assoc op :value
              (case (:f op)
                :hold   nil
-             ))
+			   :fail-over (do
+			        (c/cd db-def/working-dir
+                        ;; (c/exec (c/lit "./redis-cli --cluster n6 CLUSTER FAILOVER FORCE")) ;; fails nomatter the command
+				    )
+			    )
+            )
+		)
 	)
 	
 	(teardown! [this test]))
 )
 			
 (defn nemesisgenerator []
-	(cycle [(gen/sleep 5)
-                                          {:type :info, :f :start}
-                                          (gen/sleep 5)
-                                          {:type :info, :f :stop}
-										  {:type :info, :f :hold}
-										  ]
-								  )
+	(cycle [	(gen/sleep 2)
+                {:type :info, :f :start}
+                (gen/sleep 2)
+                {:type :info, :f :stop}
+				(gen/sleep 2)
+				{:type :info, :f :fail-over}
+				(gen/sleep 10)
+			]
+	)
 )
 
 (defn nemesisoptions []
     (nemesis/compose
-		{#{:start :stop} (nemesis/partition-random-halves)
-		#{:hold} (my-nemesis)}
+		{
+		    #{:start :stop} (nemesis/partition-random-halves)
+		    #{:hold :fail-over} (my-nemesis)
+		}
 	)
 )
