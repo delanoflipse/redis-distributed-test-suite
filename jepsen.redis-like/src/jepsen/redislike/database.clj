@@ -12,32 +12,47 @@
             [slingshot.slingshot :refer [try+ throw+]]))
 
 
-(def working-dir     "/opt/redis")
-(def node-port     7000)
+;; running configuration
 (def replicas-per-main     1)
-(def conf-file     "redis.conf")
-(def binary "redis-server")
-(def db-file        "redis.rdb")
-(def logfile (str working-dir "/db.log"))
-(def pidfile (str working-dir "/db.pid"))
 
+;; server configuration
+
+;; REDIS
+;; (def conf-file "redis.conf")
+;; (def db-binary "redis-server")
+;; (def db-cli "redis-cli")
+;; (def build-repository "https://github.com/redis/redis")
+;; (def build-repository-name "redis")
+;; (def build-repository-version "0a8a45f")
+
+;; KEYDB
+(def conf-file "keydb.conf")
+(def db-binary "keydb-server")
+(def db-cli "keydb-cli")
+(def build-repository "https://github.com/Snapchat/KeyDB")
+(def build-repository-name "keydb")
+(def build-repository-version "478ed26")
+
+;; generic configuration
+(def working-dir "/opt/db")
+(def db-file "db.rdb")
+(def node-port 7000)
+(def checkout-root-dir "/repos")
 (def build-file
   "A file we create to track the last built version; speeds up compilation."
   "jepsen-built-version")
 
-(def checkout-root-dir "/repos")
-(def build-repository "https://github.com/redis/redis")
-(def build-repository-name "redis")
-(def build-repository-version "0a8a45f")
-
-;; generated files
+;; generated variables
 (def build-repository-path  (str checkout-root-dir "/" build-repository-name))
 (def build-full-path  (str build-repository-path "/" build-repository-version))
+(def logfile (str working-dir "/db.log"))
+(def pidfile (str working-dir "/db.pid"))
 
+;; procedures
 (defn install-tools!
   "Installs prerequisite packages for building redis and redisraft."
   []
-  (debian/install [:lsb-release :build-essential :cmake :libtool :autoconf :automake]))
+  (debian/install [:lsb-release :build-essential :cmake :libtool :autoconf :automake :nasm :autotools-dev :autoconf :libjemalloc-dev :tcl :tcl-dev :uuid-dev :libcurl4-openssl-dev :libbz2-dev :libzstd-dev :liblz4-dev :libsnappy-dev :libssl-dev :pkg-config]))
 
 (defn checkout-repo!
   "Clone a repository in directory ${checkout-root-dir}/${repo-name}/${version}"
@@ -54,7 +69,11 @@
                   (if (re-find #"pathspec .+ did not match any file" (:err e))
                     (do ; Ah, we're out of date
                       (c/exec :git :fetch)
-                      (c/exec :git :checkout build-repository-version))
+                      (c/exec :git :checkout build-repository-version)
+                      (c/exec :git :submodule :init)
+                      (c/exec :git :submodule :update)
+                      
+                      )
                     (throw+ e)))))))
 
 (def build-locks
@@ -77,15 +96,15 @@
            res#)))))
 
 (defn build-db!
-  "Compiles redis, and returns the directory we built in."
+  "Compiles db, and returns the directory we built in."
   [node]
   (with-build-version node build-repository-name build-repository-version
     (do
       (checkout-repo!)
-      (info "Building redis" build-repository-version)
+      (info "Building version" build-repository-version)
       (c/cd build-full-path
-            (c/exec :make))
-      )))
+      ;; https://redis.io/docs/getting-started/installation/install-redis-from-source/
+            (c/exec :make)))))
 
 (defn deploy-binaries!
   "Uploads binaries built from the given directory."
@@ -95,24 +114,25 @@
     (c/exec :cp (str build-dir "/src/" f) (str working-dir "/"))
     (c/exec :chmod "+x" (str working-dir "/" f))))
 
+
+;; Database definition
 (defn db
   "Redis-like DB for a particular version."
   [database version setuptype]
   (reify db/DB
     (setup! [_ test node]
       (info node "installing DB" database version setuptype)
-      ;; https://redis.io/docs/getting-started/installation/install-redis-from-source/
       (c/su
        (info "installing tools")
        (install-tools!)
-       
+
        (c/exec :mkdir :-p working-dir)
 
        (info "installing database")
        (build-db! node)
 
        (info "setting up binaries as executables")
-       (deploy-binaries! build-full-path  ["redis-server" "redis-cli"])
+       (deploy-binaries! build-full-path  [db-binary db-cli])
 
        (info "writing config")
        (c/cd working-dir
@@ -128,7 +148,7 @@ appendonly yes
         {:logfile logfile
          :pidfile pidfile
          :chdir   working-dir}
-        binary
+        db-binary
         conf-file
         :--protected-mode         "no"
         :--bind                   "0.0.0.0"
@@ -143,7 +163,7 @@ appendonly yes
          (let [nodes-urls (str/join " " (map p-util/node-url (:nodes test) (repeat node-port)))]
            (info "Creating primary cluster" nodes-urls)
            (c/cd working-dir
-                 (c/exec (c/lit "./redis-cli") :--cluster :create (c/lit nodes-urls) :--cluster-yes :--cluster-replicas (c/lit (str replicas-per-main))))
+                 (c/exec (c/lit (str "./" db-cli)) :--cluster :create (c/lit nodes-urls) :--cluster-yes :--cluster-replicas (c/lit (str replicas-per-main))))
            (info "Main init done, syncing...")
            (jepsen/synchronize test))
           ; And join on secondaries.
@@ -158,7 +178,7 @@ appendonly yes
 
     (teardown! [_ test node]
       (info node "tearing down DB")
-      (cu/stop-daemon! binary pidfile)
+      (cu/stop-daemon! db-binary pidfile)
       (c/su (c/exec :rm :-rf working-dir)))
 
     db/LogFiles
