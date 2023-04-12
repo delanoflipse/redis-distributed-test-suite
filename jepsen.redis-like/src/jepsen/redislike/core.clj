@@ -1,9 +1,12 @@
 (ns jepsen.redislike.core
   (:require [clojure.tools.logging :refer [info warn]]
+            [elle.list-append :as a]
             [jepsen
+             [checker :as checker]
              [cli :as cli]
              [generator :as gen]
              [tests :as tests]]
+            [jepsen.checker.timeline :as timeline]
             [jepsen.redislike
              [database :as db-def]
              [client :as db-client]]
@@ -12,6 +15,16 @@
 
 (defn r   [_ _] {:type :invoke, :f :read, :value nil})
 (defn w   [_ _] {:type :invoke, :f :write, :value (rand-int 5)})
+
+(defn elle-checker
+  "wrapper around elle so jepsen can use it"
+  []
+  (reify checker/Checker
+    (check [this test history opts]
+      (a/check {:consistency-models [:serializable], :directory "out"} history)
+    )
+  )
+)
 
 (defn redis-test
   "Given an options map from the command line runner (e.g. :nodes, :ssh,
@@ -27,7 +40,14 @@
           ;;                       (gen/stagger 1)
           ;;                       (gen/nemesis nil)
           ;;                       (gen/time-limit 15))
-          :pure-generators true}))
+          :pure-generators true
+		  :checker (checker/compose {
+		    :perf        (checker/perf)
+			:timeline    (timeline/html)
+			:stats       (checker/stats)
+			:elle        (elle-checker)
+		  })
+		  }))
 
 (defn -main
   "Handles command line arguments. Can either run a test, or a web server for
