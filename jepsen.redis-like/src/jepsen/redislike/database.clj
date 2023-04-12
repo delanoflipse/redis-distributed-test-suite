@@ -6,6 +6,7 @@
              [core :as jepsen]
              [db :as db]
              [tests :as tests]]
+            [jepsen.redislike.util :as p-util]
             [jepsen.control.util :as cu]
             [jepsen.control.net :as net]
             [jepsen.os.debian :as debian]))
@@ -41,8 +42,6 @@
   (doseq [f executables]
     (c/exec :cp (str build-dir "/src/" f) (str dir "/"))
     (c/exec :chmod "+x" (str dir "/" f))))
-
-(defn node-hostname! [node-name] (str (net/ip node-name) ":" node-port))
 
 (defn db
   "Redis-like DB for a particular version."
@@ -88,7 +87,7 @@ appendonly yes
        (Thread/sleep 2000)
        (if (= node (jepsen/primary test))
               ; Initialize the cluster on the primary
-         (let [nodes-urls (str/join " " (map node-hostname! (:nodes test)))]
+         (let [nodes-urls (str/join " " (map p-util/node-url (:nodes test) (repeat node-port)))]
            (info "Creating primary cluster" nodes-urls)
            (c/exec :redis-cli :--cluster :create (c/lit nodes-urls) :--cluster-yes))
               ; And join on secondaries.
