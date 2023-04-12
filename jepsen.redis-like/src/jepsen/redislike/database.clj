@@ -69,8 +69,6 @@ cluster-config-file nodes.conf
 cluster-node-timeout 5000
 appendonly yes
                        " conf-file))
-       (info (c/exec :cat :< (str dir "/" conf-file)))
-
 
        (cu/start-daemon!
         {:logfile logfile
@@ -88,12 +86,14 @@ appendonly yes
          (let [nodes-urls (str/join " " (map p-util/node-url (:nodes test) (repeat node-port)))]
            (info "Creating primary cluster" nodes-urls)
            (c/exec :redis-cli :--cluster :create (c/lit nodes-urls) :--cluster-yes)
-           (info "Main init done, syncing")
-           (jepsen/synchronize test 600))
+           (info "Main init done, syncing"))
               ; And join on secondaries.
          (do
-           (info "Secondary setup")
-           (jepsen/synchronize test 600)))))
+           (info "Secondary does nothing"))))
+
+      (jepsen/synchronize test 1000)
+      (info "Synced")
+      (Thread/sleep 4000))
 
     (teardown! [_ test node]
       (info node "tearing down DB")

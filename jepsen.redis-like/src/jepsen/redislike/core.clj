@@ -7,11 +7,10 @@
             [jepsen.redislike
              [client :as client]
              [database :as db-def]]
-            [jepsen.os.debian :as debian]
-            [jepsen.redislike.client :as client]))
+            [jepsen.os.debian :as debian]))
 
 (defn r   [_ _] {:type :invoke, :f :read, :value nil})
-(defn w   [_ _] {:type :invoke, :f :write, :value (rand-int 5)})
+(defn w   [_ _] {:type :invoke, :f :write, :value (str (rand-int 5))})
 
 (defn redis-test
   "Given an options map from the command line runner (e.g. :nodes, :ssh,
@@ -23,7 +22,7 @@
           :os   debian/os
           :db   (db-def/db "redis" "vx.y.z" "cluster")
           :client (client/->RedisClient nil)
-          :generator       (->> r
+          :generator       (->> (gen/mix [r w])
                                 (gen/stagger 1)
                                 (gen/nemesis nil)
                                 (gen/time-limit 15))
