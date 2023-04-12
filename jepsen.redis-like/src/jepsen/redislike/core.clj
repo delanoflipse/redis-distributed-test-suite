@@ -5,12 +5,15 @@
              [checker :as checker]
              [cli :as cli]
              [generator :as gen]
+             [nemesis :as nemesis]
              [tests :as tests]]
             [jepsen.checker.timeline :as timeline]
             [jepsen.redislike
-             [client :as client]
-             [database :as db-def]]
-            [jepsen.os.debian :as debian]))
+             [database :as db-def]
+             [nemesis :as db-nemesis]
+             [client :as client]]
+            [jepsen.os.debian :as debian]
+            [jepsen.redislike.nemesis :as redisnemesis]))
 
 (defn r   [_ _] {:type :invoke, :f :read, :value nil})
 (defn append   [_ _] {:type :invoke, :f :write, :value (rand-int 5)})
@@ -20,10 +23,7 @@
   []
   (reify checker/Checker
     (check [this test history opts]
-      (a/check {:consistency-models [:serializable], :directory "out"} history)
-    )
-  )
-)
+      (a/check {:consistency-models [:serializable], :directory "out"} history))))
 
 (defn redis-test
   "Given an options map from the command line runner (e.g. :nodes, :ssh,
@@ -37,16 +37,15 @@
           :client (client/->RedisClient nil)
           :generator       (->> (gen/mix [r append])
                                 (gen/stagger 1)
+                                ;; (gen/nemesis (db-nemesis/nemesisgenerator))
                                 (gen/nemesis nil)
                                 (gen/time-limit 15))
           :pure-generators true
-		  :checker (checker/compose {
-		    :perf        (checker/perf)
-			:timeline    (timeline/html)
-			:stats       (checker/stats)
-			:elle        (elle-checker)
-		  })
-		  }))
+          ;; :nemesis (redisnemesis/nemesisoptions)
+          :checker (checker/compose {:perf        (checker/perf)
+                                     :timeline    (timeline/html)
+                                     :stats       (checker/stats)
+                                     :elle        (elle-checker)})}))
 
 ;; TODO: automate node count
 (defn -main
