@@ -5,7 +5,7 @@
             [taoensso.carmine [connections :as conn]]
             [jepsen
              [cli :as cli]
-             [client :as client]]
+             [client :as jclient]]
             [slingshot.slingshot :refer [try+ throw+]]
             [jepsen.redislike.util :as p-util]
             [jepsen.redislike.database :as db-def]))
@@ -46,18 +46,21 @@
   (.close (:pool conn)))
 
 
-(defrecord Client [conn]
-  client/Client
+(defrecord RedisClient [conn]
+  jepsen.client/Client
   (open! [this test node]
 
     (assoc this :conn (open-con node)))
 
+  (close! [this test]
+          (close-con! conn))
 
   (setup! [_ test])
 
-  (invoke! [_ test op])
+  (invoke! [this test op]
+           (case (:f op)
+             :read (assoc op :type :ok, :value (wcar conn (car/get "foo")))))
 
   (teardown! [_ test])
 
-  (close! [this test]
-    (close-con! conn)))
+  )

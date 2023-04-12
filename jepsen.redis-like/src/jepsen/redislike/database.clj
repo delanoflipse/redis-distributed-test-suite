@@ -1,14 +1,12 @@
 (ns jepsen.redislike.database
   (:require [clojure.tools.logging :refer [info warn]]
             [clojure.string :as str]
-            [jepsen [cli :as cli]
+            [jepsen
              [control :as c]
              [core :as jepsen]
-             [db :as db]
-             [tests :as tests]]
+             [db :as db]]
             [jepsen.redislike.util :as p-util]
             [jepsen.control.util :as cu]
-            [jepsen.control.net :as net]
             [jepsen.os.debian :as debian]))
 
 
@@ -89,9 +87,13 @@ appendonly yes
               ; Initialize the cluster on the primary
          (let [nodes-urls (str/join " " (map p-util/node-url (:nodes test) (repeat node-port)))]
            (info "Creating primary cluster" nodes-urls)
-           (c/exec :redis-cli :--cluster :create (c/lit nodes-urls) :--cluster-yes))
+           (c/exec :redis-cli :--cluster :create (c/lit nodes-urls) :--cluster-yes)
+           (info "Main init done, syncing")
+           (jepsen/synchronize test 600))
               ; And join on secondaries.
-         (info "Secondary setup?"))))
+         (do
+           (info "Secondary setup")
+           (jepsen/synchronize test 600)))))
 
     (teardown! [_ test node]
       (info node "tearing down DB")

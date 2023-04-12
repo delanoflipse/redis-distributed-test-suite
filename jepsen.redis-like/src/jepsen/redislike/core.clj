@@ -5,10 +5,10 @@
              [generator :as gen]
              [tests :as tests]]
             [jepsen.redislike
-             [database :as db-def]
-             [client :as db-client]]
-            [jepsen.os.debian :as debian] 
-            ))
+             [client :as client]
+             [database :as db-def]]
+            [jepsen.os.debian :as debian]
+            [jepsen.redislike.client :as client]))
 
 (defn r   [_ _] {:type :invoke, :f :read, :value nil})
 (defn w   [_ _] {:type :invoke, :f :write, :value (rand-int 5)})
@@ -22,11 +22,11 @@
          {:name "redislike"
           :os   debian/os
           :db   (db-def/db "redis" "vx.y.z" "cluster")
-          ;; :client (db-client/Client. nil)
-          ;; :generator       (->> r
-          ;;                       (gen/stagger 1)
-          ;;                       (gen/nemesis nil)
-          ;;                       (gen/time-limit 15))
+          :client (client/->RedisClient nil)
+          :generator       (->> r
+                                (gen/stagger 1)
+                                (gen/nemesis nil)
+                                (gen/time-limit 15))
           :pure-generators true}))
 
 (defn -main
