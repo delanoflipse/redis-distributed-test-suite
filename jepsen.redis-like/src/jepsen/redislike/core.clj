@@ -5,12 +5,14 @@
              [checker :as checker]
              [cli :as cli]
              [generator :as gen]
+             [nemesis :as nemesis]
              [tests :as tests]]
             [jepsen.checker.timeline :as timeline]
             [jepsen.redislike
              [database :as db-def]
              [client :as db-client]]
             [jepsen.os.debian :as debian] 
+			[jepsen.redislike.nemesis :as redisnemesis]
             ))
 
 (defn r   [_ _] {:type :invoke, :f :read, :value nil})
@@ -36,11 +38,15 @@
           :os   debian/os
           :db   (db-def/db "redis" "vx.y.z" "cluster")
           ;; :client (db-client/Client. nil)
-          ;; :generator       (->> r
+          ;; :generator       (->> (gen/mix [r append])
           ;;                       (gen/stagger 1)
-          ;;                       (gen/nemesis nil)
+          ;;                       (gen/nemesis (cycle [(gen/sleep 5)
+          ;;                                            {:type :info, :f :start}
+          ;;                                            (gen/sleep 5)
+          ;;                                            {:type :info, :f :stop}]))
           ;;                       (gen/time-limit 15))
           :pure-generators true
+		  :nemesis (redisnemesis/nemesisoptions)
 		  :checker (checker/compose {
 		    :perf        (checker/perf)
 			:timeline    (timeline/html)
