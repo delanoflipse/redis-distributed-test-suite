@@ -8,4 +8,5 @@
   :dependencies [[org.clojure/clojure "1.10.0"]
                  [jepsen "0.2.7"]
                  [redis.clients/jedis "4.3.0"]
+                 [elle "0.1.5"]
                  [com.taoensso/carmine "3.2.0"]])
