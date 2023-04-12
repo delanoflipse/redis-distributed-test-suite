@@ -3,6 +3,7 @@ from edn_format import Keyword
 from simple_droped_append import *
 from linear_droped_append import *
 from fail_analysis import *
+from check_order_inversion import *
 
 def parse(file_name):
     inputfile = open(file_name)
@@ -54,6 +55,7 @@ def main():
     storage = track_linear_droped_append(history)
     print(storage)
     analyse_simple_droped_append(storage)
+    check_order_inversion(history)
 
     return 0
 
