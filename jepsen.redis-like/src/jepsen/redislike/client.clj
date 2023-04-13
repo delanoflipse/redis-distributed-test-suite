@@ -1,18 +1,11 @@
 (ns jepsen.redislike.client
   (:require [clojure.tools.logging :refer [info warn]]
-            [clojure.string :as str]
-            [taoensso.carmine :as car :refer [wcar]]
-            [taoensso.carmine [connections :as conn]]
             [jepsen
-             [cli :as cli]
              [util :as util :refer [parse-long]]
              [client :as jclient]]
             [slingshot.slingshot :refer [try+ throw+]]
-            [jepsen.redislike.util :as p-util]
-            [jepsen.redislike.jedis :as jedis]
-            [jepsen.redislike.database :as db-def]))
+            [jepsen.redislike.jedis :as jedis]))
 
-;; TODO: extend with actually occurring errors
 (defmacro with-exceptions
   "Takes an operation, an idempotent :f set, and a body; evaluates body,
   converting known exceptions to failed ops."
@@ -48,6 +41,9 @@
            (catch java.io.EOFException e#
              (assoc ~op :type crash#, :error :eof))
 
+           (catch redis.clients.jedis.exceptions.JedisClusterException e#
+             (assoc ~op :type crash#, :error (.getMessage e#)))
+
            (catch java.net.ConnectException e#
              (assoc ~op :type :fail, :error :connection-refused))
 
@@ -57,10 +53,20 @@
            (catch java.net.SocketTimeoutException e#
              (assoc ~op :type crash#, :error :socket-timeout)))))
 
+(defn apply-operation!
+  "Apply a single operation in a (Elle-formatted) transaction."
+  [conn [operation key-name value :as op-def]]
+  (case operation
+    :r      [operation key-name (mapv parse-long (.lrange conn (str key-name) 0 -1))]
+    :append (do
+              (.rpush conn (str key-name) (into-array String [(str value)]))
+              op-def)))
+
+; Redis client based on Jedis
 (defrecord RedisClient [conn]
   jepsen.client/Client
   (open! [this test node]
-    (assoc this :conn (jedis/connect! (:nodes test) 7000)))
+    (assoc this :conn (jedis/connect! (:nodes test) (:port test))))
 
   (close! [this test]
     (.close conn))
@@ -69,13 +75,12 @@
 
   (invoke! [this test op]
     (with-exceptions op #{}
-      (let [op-key (:key op)]
-        (case (:f op)
-          ;; read key
-          :read (assoc op :type :ok, :key op-key, :value (mapv parse-long (.lrange conn (str op-key) 0 -1)))
-          ;; append to key
-          :write (do
-                   (.rpush conn (str op-key) (into-array String [(str (:value op))]))
-                   (assoc op :type :ok, :key op-key))))))
+      (->>
+       ;; take the transaction
+       (:value op)
+       ;; apply every operation 
+       (mapv apply-operation! (repeat conn))
+       ;; return and associate
+       (assoc op :type :ok, :value))))
 
   (teardown! [_ test]))

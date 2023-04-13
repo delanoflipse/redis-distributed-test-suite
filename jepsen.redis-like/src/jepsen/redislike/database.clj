@@ -11,32 +11,32 @@
             [jepsen.os.debian :as debian]
             [slingshot.slingshot :refer [try+ throw+]]))
 
-
-;; running configuration
-(def replicas-per-main 1)
-
 ;; server configuration
 
-;; REDIS
-(def conf-file "redis.conf")
-(def db-binary "redis-server")
-(def db-cli "redis-cli")
-(def build-repository "https://github.com/redis/redis")
-(def build-repository-name "redis")
-(def build-repository-version "0a8a45f")
+(def use-redis? false)
 
-;; KEYDB
-;; (def conf-file "keydb.conf")
-;; (def db-binary "keydb-server")
-;; (def db-cli "keydb-cli")
-;; (def build-repository "https://github.com/Snapchat/KeyDB")
-;; (def build-repository-name "keydb")
-;; (def build-repository-version "478ed26")
+(if use-redis?
+  ; REDIS
+  (do
+    (def conf-file "redis.conf")
+    (def db-binary "redis-server")
+    (def db-cli "redis-cli")
+    (def build-repository "https://github.com/redis/redis")
+    (def build-repository-name "redis")
+    (def build-repository-version "0a8a45f"))
+  (do
+  ; KEYDB
+    (def conf-file "keydb.conf")
+    (def db-binary "keydb-server")
+    (def db-cli "keydb-cli")
+    (def build-repository "https://github.com/Snapchat/KeyDB")
+    (def build-repository-name "keydb")
+    (def build-repository-version "478ed26")))
+
 
 ;; generic configuration
 (def working-dir "/opt/db")
 (def db-file "db.rdb")
-(def node-port 7000)
 (def checkout-root-dir "/repos")
 (def build-file
   "A file we create to track the last built version; speeds up compilation."
@@ -50,7 +50,7 @@
 
 ;; procedures
 (defn install-tools!
-  "Installs prerequisite packages for building redis and redisraft."
+  "Installs prerequisite packages for building redis and keybdb."
   []
   (debian/install [:lsb-release :build-essential :cmake :libtool :autoconf :automake :nasm :autotools-dev :autoconf :libjemalloc-dev :tcl :tcl-dev :uuid-dev :libcurl4-openssl-dev :libbz2-dev :libzstd-dev :liblz4-dev :libsnappy-dev :libssl-dev :pkg-config]))
 
@@ -71,9 +71,7 @@
                       (c/exec :git :fetch)
                       (c/exec :git :checkout build-repository-version)
                       (c/exec :git :submodule :init)
-                      (c/exec :git :submodule :update)
-                      
-                      )
+                      (c/exec :git :submodule :update))
                     (throw+ e)))))))
 
 (def build-locks
@@ -136,13 +134,13 @@
 
        (info "writing config")
        (c/cd working-dir
-             (cu/write-file! "
-port 7000
+             (cu/write-file! (str "
+port " (:port test) "
 cluster-enabled yes
 cluster-config-file nodes.conf
 cluster-node-timeout 5000
 appendonly yes
-                       " conf-file))
+                       ") conf-file))
 
        (cu/start-daemon!
         {:logfile logfile
@@ -160,10 +158,10 @@ appendonly yes
 
        (if (= node (jepsen/primary test))
           ; Initialize the cluster on the primary
-         (let [nodes-urls (str/join " " (map p-util/node-url (:nodes test) (repeat node-port)))]
+         (let [nodes-urls (str/join " " (map p-util/node-url (:nodes test) (repeat (:port test))))]
            (info "Creating primary cluster" nodes-urls)
            (c/cd working-dir
-                 (c/exec (c/lit (str "./" db-cli)) :--cluster :create (c/lit nodes-urls) :--cluster-yes :--cluster-replicas (c/lit (str replicas-per-main))))
+                 (c/exec (c/lit (str "./" db-cli)) :--cluster :create (c/lit nodes-urls) :--cluster-yes :--cluster-replicas (:replicas test)))
            (info "Main init done, syncing...")
            (jepsen/synchronize test))
           ; And join on secondaries.
