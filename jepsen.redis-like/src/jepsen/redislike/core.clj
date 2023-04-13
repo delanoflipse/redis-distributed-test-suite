@@ -15,17 +15,6 @@
              [client :as client]]
             [jepsen.os.debian :as debian]
             [jepsen.tests.cycle.append :as append]))
-(def keys-in-use [:ice-cream :steak :apple :foo :bar :x :y :z])
-
-(defn r   [_ _] {:type :invoke, :value [[:r (rand-nth keys-in-use) nil]]})
-(defn append   [_ _] {:type :invoke,  :value [[:append (rand-nth keys-in-use) (rand-int 5)]]})
-
-(defn elle-checker
-  "wrapper around elle so jepsen can use it"
-  []
-  (reify checker/Checker
-    (check [this test history opts]
-      (a/check {:consistency-models [:serializable], :directory "out"} history))))
 
 (defn redis-test
   "Given an options map from the command line runner (e.g. :nodes, :ssh,
@@ -63,6 +52,7 @@
 
 (def cli-opts
   "Options for test runners."
+;; TODO: automate node count
   [["-c" "--node-count" "Amount of nodes"
     :default 6]
 
@@ -75,7 +65,6 @@
     :parse-fn read-string
     :validate [#(and (number? %) (pos? %)) "must be a positive number"]]])
 
-;; TODO: automate node count
 (defn -main
   "Handles command line arguments. Can either run a test, or a web server for
   browsing results."
