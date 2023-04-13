@@ -11,10 +11,13 @@
             [jepsen.checker.timeline :as timeline]
             [jepsen.redislike
              [database :as db-def]
-             [client :as db-client]]
+             [client :as db-client]
+			 [util :as p-util]]
             [jepsen.os.debian :as debian]
             [jepsen.tests.cycle.append :as append]			
-            ))
+    )
+	(:use clojure.pprint)
+)
 
 (defn my-nemesis
   "Adds and removes nodes from the cluster."
@@ -23,15 +26,47 @@
     (setup! [this test] this)
 
     (invoke! [this test op]
-		(info "run nemesis")
         (assoc op :value
              (case (:f op)
-               :hold   nil
-			   :fail-over (do
-			        (c/cd db-def/working-dir
-                        ;; (c/exec (c/lit "./redis-cli --cluster n6 CLUSTER FAILOVER FORCE")) ;; fails nomatter the command
-				    )
+                :hold   nil
+			    :fail-over (let [node (:node op)] ;; (rand-nth (:nodes test))
+					(info node)
+					(c/with-session node (get (:sessions test) node)
+						(c/cd db-def/working-dir
+							(c/exec (c/lit "./redis-cli -c -p 7000 cluster failover"))
+						)
+					)
+				)
+				:del-node (let [node (:node op)]
+					(c/with-session node (get (:sessions test) node)
+						(c/cd db-def/working-dir
+							(let [node-id (c/exec (c/lit "./redis-cli -c -p 7000 cluster myid"))]
+								;;(info node-id)
+								;;(pprint test)
+								;;(info (:node op))
+								(c/exec (c/lit "./redis-cli --cluster del-node n1:7000") node-id)
+							)
+						)
+					)
 			    )
+				:add-node (let [node (:node op)]
+					(c/with-session node (get (:sessions test) node)
+						(c/cd db-def/working-dir
+							(let [node-id (c/exec (c/lit "./redis-cli -c -p 7000 cluster myid"))]
+								;;(info node-id)
+								;;(info "add")
+								(c/exec (c/lit "./redis-cli --cluster add-node localhost:7000") (p-util/node-url "n1" 7000)) ;; need node ip
+							)
+						)
+					)
+				)
+				:cluster-nodes (let [node (:node op)]
+					(c/with-session node (get (:sessions test) node)
+						(c/cd db-def/working-dir
+							(info (c/exec (c/lit "./redis-cli -c -p 7000 cluster nodes")))
+						)
+					)
+				)
             )
 		)
 	)
@@ -45,7 +80,11 @@
                 (gen/sleep 2)
                 {:type :info, :f :stop}
 				(gen/sleep 2)
-				{:type :info, :f :fail-over}
+				{:type :info, :f :del-node, :node "n4"}
+				(gen/sleep 1)
+				{:type :info, :f :cluster-nodes, :node "n1"}
+				(gen/sleep 1)
+				{:type :info, :f :add-node, :node "n4"}
 				(gen/sleep 10)
 			]
 	)
@@ -55,7 +94,7 @@
     (nemesis/compose
 		{
 		    #{:start :stop} (nemesis/partition-random-halves)
-		    #{:hold :fail-over} (my-nemesis)
+		    #{:hold :fail-over :del-node :add-node :cluster-nodes} (my-nemesis)
 		}
 	)
 )
