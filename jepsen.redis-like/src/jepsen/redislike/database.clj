@@ -17,21 +17,26 @@
 
 ;; server configuration
 
-;; REDIS
-(def conf-file "redis.conf")
-(def db-binary "redis-server")
-(def db-cli "redis-cli")
-(def build-repository "https://github.com/redis/redis")
-(def build-repository-name "redis")
-(def build-repository-version "0a8a45f")
+(def use-redis? false)
 
-;; KEYDB
-;; (def conf-file "keydb.conf")
-;; (def db-binary "keydb-server")
-;; (def db-cli "keydb-cli")
-;; (def build-repository "https://github.com/Snapchat/KeyDB")
-;; (def build-repository-name "keydb")
-;; (def build-repository-version "478ed26")
+(if use-redis?
+  ; REDIS
+  (do
+    (def conf-file "redis.conf")
+    (def db-binary "redis-server")
+    (def db-cli "redis-cli")
+    (def build-repository "https://github.com/redis/redis")
+    (def build-repository-name "redis")
+    (def build-repository-version "0a8a45f"))
+  (do
+  ; KEYDB
+    (def conf-file "keydb.conf")
+    (def db-binary "keydb-server")
+    (def db-cli "keydb-cli")
+    (def build-repository "https://github.com/Snapchat/KeyDB")
+    (def build-repository-name "keydb")
+    (def build-repository-version "478ed26")))
+
 
 ;; generic configuration
 (def working-dir "/opt/db")
@@ -50,7 +55,7 @@
 
 ;; procedures
 (defn install-tools!
-  "Installs prerequisite packages for building redis and redisraft."
+  "Installs prerequisite packages for building redis and keybdb."
   []
   (debian/install [:lsb-release :build-essential :cmake :libtool :autoconf :automake :nasm :autotools-dev :autoconf :libjemalloc-dev :tcl :tcl-dev :uuid-dev :libcurl4-openssl-dev :libbz2-dev :libzstd-dev :liblz4-dev :libsnappy-dev :libssl-dev :pkg-config]))
 
@@ -71,9 +76,7 @@
                       (c/exec :git :fetch)
                       (c/exec :git :checkout build-repository-version)
                       (c/exec :git :submodule :init)
-                      (c/exec :git :submodule :update)
-                      
-                      )
+                      (c/exec :git :submodule :update))
                     (throw+ e)))))))
 
 (def build-locks
