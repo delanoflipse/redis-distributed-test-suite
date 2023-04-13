@@ -16,6 +16,9 @@
             [jepsen.os.debian :as debian]
             [jepsen.tests.cycle.append :as append]))
 
+
+(defn as-node-host [num] (str "n" (+ num 1)))
+
 (defn redis-test
   "Given an options map from the command line runner (e.g. :nodes, :ssh,
   :concurrency, ...), constructs a test map."
@@ -36,6 +39,7 @@
            {:name "redislike"
             :os   debian/os
             :db   (db-def/db "redis" "vx.y.z" "cluster")
+            :nodes (into [] (map as-node-host (range (:node-count opts))))
             :client (client/->RedisClient nil)
             :generator       (->> ;;(gen/mix [r append])
                               (:generator workload)
@@ -55,6 +59,12 @@
 ;; TODO: automate node count
   [["-c" "--node-count" "Amount of nodes"
     :default 6]
+
+   ["-p" "--port" "DB node port"
+    :default 7000]
+
+   [nil "--replicas" "Replicas per primary"
+    :default 1]
 
    [nil "--max-txn-length INT" "What's the most operations we can execute per transaction?"
     :parse-fn parse-long
