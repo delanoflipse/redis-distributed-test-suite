@@ -13,7 +13,7 @@
 
 ;; server configuration
 
-(def use-redis? false)
+(def use-redis? true)
 
 (if use-redis?
   ; REDIS

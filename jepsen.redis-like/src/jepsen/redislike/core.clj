@@ -56,14 +56,14 @@
 
 (def cli-opts
   "Options for test runners."
-;; TODO: automate node count
-  [["-c" "--node-count" "Amount of nodes"
+  [["-c" "--node-count INT" "Amount of nodes"
     :default 6]
 
-   ["-p" "--port" "DB node port"
+   ["-p" "--port INT" "DB node port"
     :default 7000]
 
-   [nil "--replicas" "Replicas per primary"
+   [nil "--replicas INT" "Replicas per primary"
+    :parse-fn parse-long
     :default 1]
 
    [nil "--max-txn-length INT" "What's the most operations we can execute per transaction?"

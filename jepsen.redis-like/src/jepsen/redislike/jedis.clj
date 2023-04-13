@@ -5,6 +5,10 @@
 
 (defn as-host-and-port! [node port] (HostAndPort. (net/ip node) port))
 
-(defn connect! [nodes port]
-   (let [c (apply hash-set (map as-host-and-port! nodes (repeat port)))]
+(defn connect! [node test]
+   (let [c (apply hash-set [(as-host-and-port! node (:port test))])]
      (JedisCluster. c)))
+
+;; (defn connect! [node test]
+;;    (let [c (apply hash-set (map as-host-and-port! (:nodes test) (repeat (:port test))))]
+;;      (JedisCluster. c)))

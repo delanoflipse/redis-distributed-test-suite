@@ -66,7 +66,7 @@
 (defrecord RedisClient [conn]
   jepsen.client/Client
   (open! [this test node]
-    (assoc this :conn (jedis/connect! (:nodes test) (:port test))))
+    (assoc this :conn (jedis/connect! node test)))
 
   (close! [this test]
     (.close conn))
