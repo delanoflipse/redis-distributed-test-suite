@@ -33,19 +33,19 @@
                             (info node)
                             (c/with-session node (get (:sessions test) node)
                               (c/cd db-def/working-dir
-                                    (c/exec (c/lit (str "./" db-def/db-cli " -c -p 7000 cluster failover"))))))
+                                    (c/exec (c/lit (str "./" (:db-cli test) " -c -p 7000 cluster failover"))))))
                :del-node (let [node (:node op)]
                            (c/with-session node (get (:sessions test) node)
                              (c/cd db-def/working-dir
-                                   (let [node-id (c/exec (c/lit (str "./" db-def/db-cli " -c -p 7000 cluster myid")))]
+                                   (let [node-id (c/exec (c/lit (str "./" (:db-cli test) " -c -p 7000 cluster myid")))]
 								;;(info node-id)
 								;;(pprint test)
 								;;(info (:node op))
-                                     (c/exec (c/lit (str "./" db-def/db-cli " --cluster del-node n1:7000")) node-id)))))
+                                     (c/exec (c/lit (str "./" (:db-cli test) " --cluster del-node n1:7000")) node-id)))))
                :add-node (let [node (:node op)]
                            (c/with-session node (get (:sessions test) node)
                              (c/cd db-def/working-dir
-                                   (c/exec (c/lit (str "./" db-def/db-cli " --cluster add-node localhost:7000")) (p-util/node-url "n1" 7000)))))
+                                   (c/exec (c/lit (str "./" (:db-cli test) " --cluster add-node localhost:7000")) (p-util/node-url "n1" 7000)))))
                :cluster-nodes (let [node (:node op)]
                                 (c/with-session node (get (:sessions test) node)
                                   (c/cd db-def/working-dir
@@ -79,10 +79,10 @@
 (defn package-for
   "Builds a combined package for the given options."
   [opts]
-  (let [nem-opts (nc/compose-packages (nc/nemesis-packages opts))]  nem-opts ))
+  (let [nem-opts (nc/compose-packages (nc/nemesis-packages opts))]  nem-opts))
 
 (defn nemesis [opts db]
   (let [nem-pkg (package-for opts)] {:generator (:generator nem-pkg)
                                      :final-generator (:final-generator nem-pkg)
-                  																		 :perf (:perf nem-pkg)
+                                     :perf (:perf nem-pkg)
                                      :nemesis (:nemesis nem-pkg)}))
