@@ -79,7 +79,7 @@ def check_duplicate_append_requests(history):
 def main():
 
     #history = parse("test_history.edn")
-    history = parse("histories/history_redis_elle_fail.edn")
+    history = parse("histories/history_redis_new.edn")
     analyse_fails(history)
     check_duplicate_append_requests(history)
     storage = track_linear_droped_append(history)

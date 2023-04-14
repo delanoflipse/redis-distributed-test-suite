@@ -62,7 +62,7 @@ def analyse_simple_droped_append(storage):
 
         append_count = len(data["append"])
         lost_count = len(data["lost"])
-        found_count = len(data["found"])
+        found_count = len(set(data["found"]))
         latest_count = len(data["latest"])
         latest_no_duplicates = len(set(data["latest"]))
         duplicates = []
@@ -73,7 +73,7 @@ def analyse_simple_droped_append(storage):
         found_percentage = found_count / lost_count * 100 if lost_count != 0 else 100.0;
         latest_percentage = latest_count / append_count * 100;
 
-        print('{} : lost: {}%, recovered: {}%, final contained: {}%, final duplicates: {} {}'.format(key, lost_percentage, found_percentage, latest_percentage, latest_count-latest_no_duplicates, duplicates))
+        print('{} : lost: {}%, recovered: {}%, final contained: {}%, final duplicates: {} {}, found: {}'.format(key, lost_percentage, found_percentage, latest_percentage, latest_count-latest_no_duplicates, duplicates, set(data["found"])))
 
         num_keys += 1
         lost_total += lost_percentage
