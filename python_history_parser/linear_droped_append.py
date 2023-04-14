@@ -19,6 +19,7 @@ def track_linear_droped_append(history):
                     lost = []
                     found = []
                     early_read = []
+                    minimal_values = []
                     if action[1] in storage:
                         values = storage[action[1]]["append"]
                         minimal_values = storage[action[1]]["invoke_append"]

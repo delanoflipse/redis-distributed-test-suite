@@ -39,6 +39,18 @@ def track_simple_droped_append(history):
     
     return storage
 
+def find_duplicates(mylist):
+#https://www.trainingint.com/how-to-find-duplicates-in-a-python-list.html
+    newlist = [] # empty list to hold unique elements from the list
+    duplist = [] # empty list to hold the duplicate elements from the list
+    for i in mylist:
+        if i not in newlist:
+            newlist.append(i)
+        else:
+            duplist.append(i) # this method catches the first duplicate entries, and appends them to the list
+    
+    return duplist
+
 def analyse_simple_droped_append(storage):
     num_keys = 0;
     lost_total = 0;
@@ -52,12 +64,16 @@ def analyse_simple_droped_append(storage):
         lost_count = len(data["lost"])
         found_count = len(data["found"])
         latest_count = len(data["latest"])
+        latest_no_duplicates = len(set(data["latest"]))
+        duplicates = []
+        if (latest_count-latest_no_duplicates > 0):
+            duplicates = find_duplicates(data["latest"])
 
         lost_percentage = lost_count / append_count * 100;
         found_percentage = found_count / lost_count * 100 if lost_count != 0 else 100.0;
         latest_percentage = latest_count / append_count * 100;
 
-        print('{} : lost: {}%, recovered: {}%, final contained: {}%'.format(key, lost_percentage, found_percentage, latest_percentage))
+        print('{} : lost: {}%, recovered: {}%, final contained: {}%, final duplicates: {} {}'.format(key, lost_percentage, found_percentage, latest_percentage, latest_count-latest_no_duplicates, duplicates))
 
         num_keys += 1
         lost_total += lost_percentage
@@ -68,4 +84,4 @@ def analyse_simple_droped_append(storage):
     found_total /= num_keys
     latest_total /= num_keys
 
-    print('total : lost: {}%, recovered: {}%, final contained: {}%'.format(lost_total, found_total, latest_total))
+    print('average : lost: {}%, recovered: {}%, final contained: {}%'.format(lost_total, found_total, latest_total))

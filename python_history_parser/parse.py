@@ -48,14 +48,44 @@ def verify_this_order(history):
     #print(storage)
     return True
 
+def check_duplicate_append_requests(history):
+    commits = [x for x in history if x[Keyword("type")]==Keyword("ok")]
+
+    storage = {}
+
+    for commit in commits:
+        transaction = commit[Keyword("value")]
+        for action in transaction:
+            if action[0] == Keyword("append"):
+                # execute the append
+                if action[1] in storage:
+                    storage[action[1]].append(action[2])
+                else:
+                    storage[action[1]] = [action[2]]
+    
+    duplicate_found = False
+    
+    for key_store in storage.items():
+        key = key_store[0]
+        data = key_store[1]
+        
+        if(len(data) != len(set(data))):
+            print(key, " has duplicated append request")
+            duplicate_found = True
+    
+    if not duplicate_found:
+        print("No duplicated append requests")
+
 def main():
 
-    history = parse("test_history.edn")
+    #history = parse("test_history.edn")
+    history = parse("histories/history_redis_elle_fail.edn")
     analyse_fails(history)
+    check_duplicate_append_requests(history)
     storage = track_linear_droped_append(history)
-    print(storage)
+    #print(storage)
     analyse_simple_droped_append(storage)
-    check_order_inversion(history)
+    #check_order_inversion(history)
 
     return 0
 
