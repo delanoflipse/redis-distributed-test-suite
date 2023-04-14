@@ -76,10 +76,44 @@
 				;;(gen/sleep 10)
                                    ]))))
 
+(defn fail-over-package
+	
+	[opts]
+	(let [needed? ((:faults opts) :fail-over)
+        nemesis (nemesis/compose {{:fail-over           :fail-over}
+                            (my-nemesis)})
+        db (:db opts)
+        target-specs (:targets (:fail-ver opts) (nc/node-specs db))
+        targets (fn [test] (nc/db-nodes test db
+                                     (some-> target-specs seq rand-nth)))
+        fail-over-gen (flatten (repeatedly #(identity [
+                                   {:type :info, :f :fail-over, :node (rand-nth (:nodes opts))}
+                      ])))
+        gen (->> fail-over-gen
+                 (gen/f-map {:fail-over           :fail-over})
+                 (gen/stagger (:interval opts nc/default-interval)))]
+    {:generator         (when needed? gen)
+     :final-generator   (when needed? {:type :info, :f :fail-over})
+     :nemesis           nemesis
+     :perf              #{{:name  "fail-over"
+                           :start #{:fail-over}
+                           :color "#70E980"}}})
+)
+
+(defn nemesis-packages
+  "Just like nemesis-package, but returns a collection of packages, rather than
+  the combined package, so you can manipulate it further before composition."
+  [opts]
+  (let [faults   (set (:faults opts [:fail-over :partition :packet :kill :pause :clock]))
+        opts     (assoc opts :faults faults)]
+    (conj (nc/nemesis-packages opts) (fail-over-package opts))
+  )
+)
+
 (defn package-for
   "Builds a combined package for the given options."
   [opts]
-  (let [nem-opts (nc/compose-packages (nc/nemesis-packages opts))]  nem-opts ))
+  (let [nem-opts (nc/compose-packages (nemesis-packages opts))]  nem-opts ))
 
 (defn nemesis [opts db]
   (let [nem-pkg (package-for opts)] {:generator (:generator nem-pkg)
