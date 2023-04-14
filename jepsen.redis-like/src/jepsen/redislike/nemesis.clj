@@ -33,18 +33,18 @@
 					(info node)
 					(c/with-session node (get (:sessions test) node)
 						(c/cd db-def/working-dir
-							(c/exec (c/lit "./redis-cli -c -p 7000 cluster failover"))
+							(c/exec (c/lit (str "./" db-def/db-cli " -c -p 7000 cluster failover")))
 						)
 					)
 				)
 				:del-node (let [node (:node op)]
 					(c/with-session node (get (:sessions test) node)
 						(c/cd db-def/working-dir
-							(let [node-id (c/exec (c/lit "./redis-cli -c -p 7000 cluster myid"))]
+							(let [node-id (c/exec (c/lit (str "./" db-def/db-cli " -c -p 7000 cluster myid")))]
 								;;(info node-id)
 								;;(pprint test)
 								;;(info (:node op))
-								(c/exec (c/lit "./redis-cli --cluster del-node n1:7000") node-id)
+								(c/exec (c/lit (str "./" db-def/db-cli " --cluster del-node n1:7000")) node-id)
 							)
 						)
 					)
@@ -52,11 +52,7 @@
 				:add-node (let [node (:node op)]
 					(c/with-session node (get (:sessions test) node)
 						(c/cd db-def/working-dir
-							(let [node-id (c/exec (c/lit "./redis-cli -c -p 7000 cluster myid"))]
-								;;(info node-id)
-								;;(info "add")
-								(c/exec (c/lit "./redis-cli --cluster add-node localhost:7000") (p-util/node-url "n1" 7000)) ;; need node ip
-							)
+							(c/exec (c/lit (str "./" db-def/db-cli " --cluster add-node localhost:7000")) (p-util/node-url "n1" 7000))
 						)
 					)
 				)
@@ -75,25 +71,36 @@
 )
 			
 (defn nemesisgenerator []
-	(cycle [	(gen/sleep 2)
-                {:type :info, :f :start}
-                (gen/sleep 2)
-                {:type :info, :f :stop}
-				(gen/sleep 2)
-				{:type :info, :f :del-node, :node "n4"}
+	(flatten (repeatedly #(identity [
 				(gen/sleep 1)
-				{:type :info, :f :cluster-nodes, :node "n1"}
+                {:type :info, :f :start-p-half}
 				(gen/sleep 1)
-				{:type :info, :f :add-node, :node "n4"}
-				(gen/sleep 10)
+				{:type :info, :f :fail-over, :node (rand-nth ["n1", "n2", "n4", "n5", "n6"])}
+                (gen/sleep 1)
+                {:type :info, :f :stop-p-half}
+				(gen/sleep 1)
+				{:type :info, :f :fail-over, :node (rand-nth ["n1", "n2", "n4", "n5", "n6"])}
+				(gen/sleep 1)
+				{:type :info, :f :start-p-node}
+				(gen/sleep 1)
+				{:type :info, :f :fail-over, :node (rand-nth ["n1", "n2", "n4", "n5", "n6"])}
+                (gen/sleep 1)
+                {:type :info, :f :stop-p-node}
+				;;{:type :info, :f :del-node, :node "n4"}
+				;;(gen/sleep 1)
+				;;{:type :info, :f :cluster-nodes, :node "n1"}
+				;;(gen/sleep 1)
+				;;{:type :info, :f :add-node, :node "n4"}
+				;;(gen/sleep 10)
 			]
-	)
+	)))
 )
 
 (defn nemesisoptions []
     (nemesis/compose
 		{
-		    #{:start :stop} (nemesis/partition-random-halves)
+		    {:start-p-half :start :stop-p-half :stop} (nemesis/partition-random-halves)
+			{:start-p-node :start :stop-p-node :stop} (nemesis/partition-random-node)
 		    #{:hold :fail-over :del-node :add-node :cluster-nodes} (my-nemesis)
 		}
 	)
