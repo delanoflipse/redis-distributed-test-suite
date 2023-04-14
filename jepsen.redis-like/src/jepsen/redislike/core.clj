@@ -1,6 +1,5 @@
 (ns jepsen.redislike.core
   (:require [clojure.tools.logging :refer [info warn]]
-            [elle.list-append :as a]
             [jepsen
              [checker :as checker]
              [cli :as cli]
@@ -41,7 +40,7 @@
             :db   (db-def/db "redis" "vx.y.z" "cluster")
             :nodes (into [] (map as-node-host (range (:node-count opts))))
             :client (client/->RedisClient nil)
-            :generator       (->> ;;(gen/mix [r append])
+            :generator       (->> 
                               (:generator workload)
                               (gen/stagger (/ (:rate opts)))
                               (gen/nemesis
@@ -57,7 +56,16 @@
 (def cli-opts
   "Options for test runners."
   [["-c" "--node-count INT" "Amount of nodes"
+    :parse-fn parse-long
     :default 6]
+
+   [nil "--client-timeout INT" "Timeout for jedis client in ms"
+    :parse-fn parse-long
+    :default 1000]
+
+   [nil "--client-max-retries INT" "Client retries"
+    :parse-fn parse-long
+    :default 1]
 
    ["-p" "--port INT" "DB node port"
     :default 7000]

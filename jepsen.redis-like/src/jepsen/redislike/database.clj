@@ -23,7 +23,7 @@
     (def db-cli "redis-cli")
     (def build-repository "https://github.com/redis/redis")
     (def build-repository-name "redis")
-    (def build-repository-version "0a8a45f"))
+    (def build-repository-version "f651708"))
   (do
   ; KEYDB
     (def conf-file "keydb.conf")
@@ -118,7 +118,7 @@
   "Redis-like DB for a particular version."
   [database version setuptype]
   (reify db/DB
-    (setup! [_ test node]
+    (setup! [this test node]
       (info node "installing DB" database version setuptype)
       (c/su
        (info "installing tools")
@@ -142,18 +142,9 @@ cluster-node-timeout 5000
 appendonly yes
                        ") conf-file))
 
-       (cu/start-daemon!
-        {:logfile logfile
-         :pidfile pidfile
-         :chdir   working-dir}
-        db-binary
-        conf-file
-        :--protected-mode         "no"
-        :--bind                   "0.0.0.0"
-        :--dbfilename             db-file
-        :--loglevel                 "debug")
+       (db/start! this test node)
        (Thread/sleep 1000)
-       (jepsen/synchronize test)
+       (jepsen/synchronize test 10000)
        (info "all servers started")
 
        (if (= node (jepsen/primary test))
@@ -174,10 +165,34 @@ appendonly yes
        (Thread/sleep 2000)
        (info "Synced")))
 
-    (teardown! [_ test node]
+    (teardown! [this test node]
       (info node "tearing down DB")
-      (cu/stop-daemon! db-binary pidfile)
+      (db/kill! this test node)
       (c/su (c/exec :rm :-rf working-dir)))
+
+    db/Process
+    (start! [_ test node]
+      (c/su
+       (info node :starting :redis)
+
+       (cu/start-daemon!
+        {:logfile logfile
+         :pidfile pidfile
+         :chdir   working-dir}
+        db-binary
+        conf-file
+        :--protected-mode         "no"
+        :--bind                   "0.0.0.0"
+        :--dbfilename             db-file
+        :--loglevel                 "debug")))
+
+    (kill! [this test node]
+      (c/su
+       (cu/stop-daemon! db-binary pidfile)))
+
+    db/Pause
+    (pause!  [_ test node] (c/su (cu/grepkill! :stop db-binary)))
+    (resume! [_ test node] (c/su (cu/grepkill! :cont db-binary)))
 
     db/LogFiles
     (log-files [_ test node]
