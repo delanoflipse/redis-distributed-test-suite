@@ -1,5 +1,6 @@
 (ns jepsen.redislike.core
   (:require [clojure.tools.logging :refer [info warn]]
+            [clojure [string :as str]]
             [jepsen
              [checker :as checker]
              [cli :as cli]
@@ -57,6 +58,24 @@
                                        :workload (:checker workload)
                                        :stats       (checker/stats)})})))
 
+(def nemeses
+  "Types of faults a nemesis can create."
+  #{:fail-over :partition :packet :kill :pause :clock})
+
+(def special-nemeses
+  "A map of special nemesis names to collections of faults"
+  {:none      []
+   :standard  [:fail-over :partition :packet :kill :pause :clock]
+   :all       [:fail-over :partition :packet :kill :pause :clock]})
+
+(defn parse-nemesis-spec
+  "Takes a comma-separated nemesis string and returns a collection of keyword
+  faults."
+  [spec]
+  (->> (str/split spec #",")
+       (map keyword)
+       (mapcat #(get special-nemeses % [%]))))
+
 (def cli-opts
   "Options for test runners."
   [["-c" "--node-count INT" "Amount of nodes"
@@ -73,6 +92,12 @@
 
    ["-p" "--port INT" "DB node port"
     :default 7000]
+   
+   [nil "--faults FAULTS" "A comma-separated list of nemesis faults to enable"
+    :parse-fn parse-nemesis-spec
+    :validate [(partial every? (into nemeses (keys special-nemeses)))
+               (str "Faults must be one of " nemeses " or "
+                    (cli/one-of special-nemeses))]]
 
    [nil "--replicas INT" "Replicas per primary"
     :parse-fn parse-long
