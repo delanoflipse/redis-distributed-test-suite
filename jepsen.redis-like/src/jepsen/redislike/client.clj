@@ -42,7 +42,10 @@
              (assoc ~op :type crash#, :error :eof))
 
            (catch redis.clients.jedis.exceptions.JedisClusterException e#
-             (assoc ~op :type crash#, :error (.getMessage e#)))
+             (assoc ~op :type :fail, :error (.getMessage e#)))
+
+           (catch redis.clients.jedis.exceptions.JedisClusterOperationException e#
+             (assoc ~op :type :fail, :error (.getMessage e#)))
 
            (catch java.net.ConnectException e#
              (assoc ~op :type :fail, :error :connection-refused))

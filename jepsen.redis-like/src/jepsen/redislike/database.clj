@@ -116,10 +116,10 @@
 ;; Database definition
 (defn db
   "Redis-like DB for a particular version."
-  [database version setuptype]
+  []
   (reify db/DB
     (setup! [this test node]
-      (info node "installing DB" database version setuptype)
+      (info node "installing DB")
       (c/su
        (info "installing tools")
        (install-tools!)
@@ -138,7 +138,7 @@
 port " (:port test) "
 cluster-enabled yes
 cluster-config-file nodes.conf
-cluster-node-timeout 5000
+cluster-node-timeout 1000
 appendonly yes
                        ") conf-file))
 

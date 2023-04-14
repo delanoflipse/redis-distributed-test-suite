@@ -22,7 +22,8 @@
   "Given an options map from the command line runner (e.g. :nodes, :ssh,
   :concurrency, ...), constructs a test map."
   [opts]
-  (let [workload (append/test
+  (let [db (db-def/db)
+        workload (append/test
                   {; Exponentially distributed, so half of the time it's gonna
                     ; be one key, 3/4 of ops will use one of 2 keys, 7/8 one of
                     ; 3 keys, etc.
@@ -30,26 +31,29 @@
                    :min-txn-length     1
                    :max-txn-length     (:max-txn-length opts 1)
                    :max-writes-per-key (:max-writes-per-key opts 128)
-                   :consistency-models [:strict-serializable]})]
+                   :consistency-models [:strict-serializable]})
+        nemesis (db-nemesis/nemesis opts db)
+]
 
     (merge tests/noop-test
            opts
 
            {:name "redislike"
             :os   debian/os
-            :db   (db-def/db "redis" "vx.y.z" "cluster")
+            :db   db
             :nodes (into [] (map as-node-host (range (:node-count opts))))
             :client (client/->RedisClient nil)
-            :generator       (->> 
+            :generator       (->>
                               (:generator workload)
                               (gen/stagger (/ (:rate opts)))
-                              (gen/nemesis
-                               (db-nemesis/nemesisgenerator))
+                              (gen/nemesis (:generator nemesis))
                               (gen/time-limit  (:time-limit opts)))
             :pure-generators true
-            :nemesis (db-nemesis/nemesisoptions)
-            :checker (checker/compose {:perf        (checker/perf)
+            :nemesis (:nemesis nemesis)
+            :final-generator (:final-generator nemesis)
+            :checker (checker/compose {:perf        (checker/perf {:perf (:perf nemesis)})
                                        :timeline    (timeline/html)
+                                       :exceptions  (checker/unhandled-exceptions)
                                        :workload (:checker workload)
                                        :stats       (checker/stats)})})))
 

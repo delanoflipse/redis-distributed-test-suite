@@ -5,10 +5,10 @@
 
 (defn as-host-and-port! [node port] (HostAndPort. (net/ip node) port))
 
-(defn connect! [node test]
-   (let [c (apply hash-set [(as-host-and-port! node (:port test))])]
-     (JedisCluster. c (int (:client-timeout test))  (int (:client-max-retries test)) )))
-
 ;; (defn connect! [node test]
-;;    (let [c (apply hash-set (map as-host-and-port! (:nodes test) (repeat (:port test))))]
-;;      (JedisCluster. c)))
+;;    (let [c (apply hash-set [(as-host-and-port! node (:port test))])]
+;;      (JedisCluster. c (int (:client-timeout test))  (int (:client-max-retries test)) )))
+
+(defn connect! [node test]
+   (let [c (apply hash-set (map as-host-and-port! (:nodes test) (repeat (:port test))))]
+     (JedisCluster. c (int (:client-timeout test))  (int (:client-max-retries test)) )))
