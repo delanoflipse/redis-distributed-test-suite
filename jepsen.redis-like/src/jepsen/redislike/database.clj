@@ -138,7 +138,7 @@ port " (:port test) "
 cluster-enabled yes
 cluster-config-file nodes.conf
 cluster-node-timeout 1000
-appendonly yes
+appendonly no
                      ") (:conf-file test)))
 
        (db/start! this test node)

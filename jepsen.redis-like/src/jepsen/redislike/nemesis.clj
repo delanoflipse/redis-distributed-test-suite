@@ -6,6 +6,7 @@
              [checker :as checker]
              [cli :as cli]
              [generator :as gen]
+             [db :as db]
              [nemesis :as nemesis]
              [tests :as tests]]
             [jepsen.checker.timeline :as timeline]
@@ -79,10 +80,26 @@
 (defn package-for
   "Builds a combined package for the given options."
   [opts]
-  (let [nem-opts (nc/compose-packages (nc/nemesis-packages opts))]  nem-opts))
+  (let [nem-opts (nc/compose-packages (nc/nemesis-packages opts))]  
+    (info "has kill?" (some #{:kill :pause} (:faults opts)))
+                                                (info "has kill proto?" (satisfies? db/Process (:db opts)))                       
+                                                (info "has kill kill again?" (contains? (:faults opts) :kill))                       
+                                                                      
+                                                                      nem-opts
+                                                                      ))
 
-(defn nemesis [opts db]
-  (let [nem-pkg (package-for opts)] {:generator (:generator nem-pkg)
+(defn nemesis [opts]
+  (let [nem-pkg (package-for opts) ] {:generator (:generator nem-pkg)
                                      :final-generator (:final-generator nem-pkg)
                                      :perf (:perf nem-pkg)
                                      :nemesis (:nemesis nem-pkg)}))
+
+;; (defn single-nemesis [opts db]
+;;   {:generator (:generator (gen/nemesis
+;;                            (cycle [(gen/sleep 5)
+;;                                    {:type :info, :f :start}
+;;                                    (gen/sleep 5)
+;;                                    {:type :info, :f :stop}])))
+;;    :final-generator nil
+;;    :perf nil
+;;    :nemesis (:nemesis nem-pkg)})

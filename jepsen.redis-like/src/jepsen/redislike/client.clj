@@ -42,10 +42,12 @@
              (assoc ~op :type crash#, :error :eof))
 
            (catch redis.clients.jedis.exceptions.JedisClusterException e#
-             (assoc ~op :type :fail, :error (.getMessage e#)))
+             (case (.getMessage e#)
+               "CLUSTERDOWN The cluster is down" (assoc ~op :type :fail, :error :clusterdown)
+               (assoc ~op :type :info, :error (str "JedisClusterException:" (.getMessage e#)))))
 
            (catch redis.clients.jedis.exceptions.JedisClusterOperationException e#
-             (assoc ~op :type :fail, :error (.getMessage e#)))
+             (assoc ~op :type :info, :error (str "JedisClusterOperationException:" (.getMessage e#))))
 
            (catch java.net.ConnectException e#
              (assoc ~op :type :fail, :error :connection-refused))

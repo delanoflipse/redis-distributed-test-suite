@@ -25,16 +25,17 @@
   [opts#]
   (let [opts (merge opts# (db-def/db-opts! opts#))
         db (db-def/db)
+        opts     (assoc opts :db db)
         workload (append/test
                   {; Exponentially distributed, so half of the time it's gonna
                     ; be one key, 3/4 of ops will use one of 2 keys, 7/8 one of
                     ; 3 keys, etc.
-                   :key-count          (:key-count opts 12)
+                   :key-count          (:key-count opts (:count opts 6))
                    :min-txn-length     1
                    :max-txn-length     (:max-txn-length opts 1)
                    :max-writes-per-key (:max-writes-per-key opts 128)
                    :consistency-models [:strict-serializable]})
-        nemesis (db-nemesis/nemesis opts db)]
+        nemesis (db-nemesis/nemesis opts)]
 
     (merge tests/noop-test
            opts
@@ -74,7 +75,8 @@
   [spec]
   (->> (str/split spec #",")
        (map keyword)
-       (mapcat #(get special-nemeses % [%]))))
+       (mapcat #(get special-nemeses % [%]))
+       (into [])))
 
 (defn as-keyword
   "Convert to keyword"
