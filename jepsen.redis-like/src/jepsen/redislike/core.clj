@@ -30,7 +30,7 @@
                   {; Exponentially distributed, so half of the time it's gonna
                     ; be one key, 3/4 of ops will use one of 2 keys, 7/8 one of
                     ; 3 keys, etc.
-                   :key-count          (:key-count opts (:count opts 6))
+                   :key-count          (:key-count opts)
                    :min-txn-length     1
                    :max-txn-length     (:max-txn-length opts 1)
                    :max-writes-per-key (:max-writes-per-key opts 128)
@@ -96,6 +96,10 @@
    [nil "--client-max-retries INT" "Client retries"
     :parse-fn parse-long
     :default 1]
+
+   [nil "--key-count INT" "Number of keys in the test"
+    :parse-fn parse-long
+    :default 12]
 
    ["-p" "--port INT" "DB node port"
     :default 7000]

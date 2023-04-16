@@ -47,7 +47,7 @@
 (defn install-tools!
   "Installs prerequisite packages for building redis and keybdb."
   []
-  (debian/install [:lsb-release :build-essential :cmake :libtool :autoconf :automake :nasm :autotools-dev :autoconf :libjemalloc-dev :tcl :tcl-dev :uuid-dev :libcurl4-openssl-dev :libbz2-dev :libzstd-dev :liblz4-dev :libsnappy-dev :libssl-dev :pkg-config]))
+  (debian/install [:lsb-release :build-essential :cmake :libtool :autoconf :automake :nasm :autotools-dev :autoconf :libjemalloc-dev :tcl :tcl-dev :uuid-dev :libcurl4-openssl-dev :libbz2-dev :libzstd-dev :liblz4-dev :libsnappy-dev :libssl-dev :pkg-config :git]))
 
 (defn checkout-repo!
   "Clone a repository in directory ${checkout-root-dir}/${repo-name}/${version}"
@@ -138,7 +138,9 @@ port " (:port test) "
 cluster-enabled yes
 cluster-config-file nodes.conf
 cluster-node-timeout 1000
-appendonly no
+appendonly yes
+# cluster-require-full-coverage no
+# appendfsync always
                      ") (:conf-file test)))
 
        (db/start! this test node)
