@@ -139,6 +139,8 @@ cluster-enabled yes
 cluster-config-file nodes.conf
 cluster-node-timeout 1000
 appendonly yes
+replica-serve-stale-data no
+# cluster-allow-reads-when-down no
 # cluster-require-full-coverage no
 # appendfsync always
                      ") (:conf-file test)))
