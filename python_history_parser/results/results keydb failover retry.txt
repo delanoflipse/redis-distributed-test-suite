@@ -1,0 +1,27 @@
+keydb failover retry
+
+01 938 Fail
+02 252 Fail
+03 124 Fail
+04 615 Fail
+05 904 Fail
+06 763 Fail
+07 915 Fail
+08 850 Fail
+09 733 Fail
+10 229 Fail
+11 786 Fail
+12 864 Fail
+13 587 Fail
+14 471 Ok
+15 063 Fail
+16 883 Fail
+17 081 Fail
+18 278 Fail
+19 019 Fail
+20 373 Fail
+
+Total stale reads:  224  /  4196
+Total lost writes:  9
+Total doubled writes 6
+ok/invoke:  11682  /  8487

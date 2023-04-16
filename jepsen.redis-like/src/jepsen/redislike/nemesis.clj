@@ -6,6 +6,7 @@
              [checker :as checker]
              [cli :as cli]
              [generator :as gen]
+             [db :as db]
              [nemesis :as nemesis]
              [tests :as tests]]
             [jepsen.checker.timeline :as timeline]
@@ -33,19 +34,19 @@
                             (info node)
                             (c/with-session node (get (:sessions test) node)
                               (c/cd db-def/working-dir
-                                    (c/exec (c/lit (str "./" db-def/db-cli " -c -p 7000 cluster failover"))))))
+                                    (c/exec (c/lit (str "./" (:db-cli test) " -c -p 7000 cluster failover"))))))
                :del-node (let [node (:node op)]
                            (c/with-session node (get (:sessions test) node)
                              (c/cd db-def/working-dir
-                                   (let [node-id (c/exec (c/lit (str "./" db-def/db-cli " -c -p 7000 cluster myid")))]
+                                   (let [node-id (c/exec (c/lit (str "./" (:db-cli test) " -c -p 7000 cluster myid")))]
 								;;(info node-id)
 								;;(pprint test)
 								;;(info (:node op))
-                                     (c/exec (c/lit (str "./" db-def/db-cli " --cluster del-node n1:7000")) node-id)))))
+                                     (c/exec (c/lit (str "./" (:db-cli test) " --cluster del-node n1:7000")) node-id)))))
                :add-node (let [node (:node op)]
                            (c/with-session node (get (:sessions test) node)
                              (c/cd db-def/working-dir
-                                   (c/exec (c/lit (str "./" db-def/db-cli " --cluster add-node localhost:7000")) (p-util/node-url "n1" 7000)))))
+                                   (c/exec (c/lit (str "./" (:db-cli test) " --cluster add-node localhost:7000")) (p-util/node-url "n1" 7000)))))
                :cluster-nodes (let [node (:node op)]
                                 (c/with-session node (get (:sessions test) node)
                                   (c/cd db-def/working-dir
@@ -76,22 +77,26 @@
 				;;(gen/sleep 10)
                                    ]))))
 
+(defn nemesisoptions []
+    (nemesis/compose
+		{
+		    {:start-p-half :start :stop-p-half :stop} (nemesis/partition-random-halves)
+			{:start-p-node :start :stop-p-node :stop} (nemesis/partition-random-node)
+		    #{:hold :fail-over :del-node :add-node :cluster-nodes} (my-nemesis)
+		}
+	)
+)
+
 (defn fail-over-package
 	
 	[opts]
 	(let [needed? ((:faults opts) :fail-over)
-        nemesis (nemesis/compose {{:fail-over           :fail-over}
-                            (my-nemesis)})
+        nemesis (nemesisoptions)
         db (:db opts)
         target-specs (:targets (:fail-ver opts) (nc/node-specs db))
         targets (fn [test] (nc/db-nodes test db
                                      (some-> target-specs seq rand-nth)))
-        fail-over-gen (flatten (repeatedly #(identity [
-                                   {:type :info, :f :fail-over, :node (rand-nth (:nodes opts))}
-                      ])))
-        gen (->> fail-over-gen
-                 (gen/f-map {:fail-over           :fail-over})
-                 (gen/stagger (:interval opts nc/default-interval)))]
+        gen (nemesisgenerator)]
     {:generator         (when needed? gen)
      :final-generator   (when needed? {:type :info, :f :fail-over})
      :nemesis           nemesis
@@ -113,10 +118,27 @@
 (defn package-for
   "Builds a combined package for the given options."
   [opts]
-  (let [nem-opts (nc/compose-packages (nemesis-packages opts))]  nem-opts ))
+  (let [nem-opts (nc/compose-packages (nemesis-packages opts))]  
+    (info "has kill?" (some #{:kill :pause} (:faults opts)))
+                                                (info "has kill proto?" (satisfies? db/Process (:db opts)))                       
+                                                (info "has kill kill again?" (contains? (:faults opts) :kill))                       
+                                                                      
+                                                                      nem-opts
+                                                                      ))
 
-(defn nemesis [opts db]
-  (let [nem-pkg (package-for opts)] {:generator (:generator nem-pkg)
+
+(defn nemesis [opts]
+  (let [nem-pkg (package-for opts) ] {:generator (:generator nem-pkg)
                                      :final-generator (:final-generator nem-pkg)
-                  																		 :perf (:perf nem-pkg)
+                                     :perf (:perf nem-pkg)
                                      :nemesis (:nemesis nem-pkg)}))
+
+;; (defn single-nemesis [opts db]
+;;   {:generator (:generator (gen/nemesis
+;;                            (cycle [(gen/sleep 5)
+;;                                    {:type :info, :f :start}
+;;                                    (gen/sleep 5)
+;;                                    {:type :info, :f :stop}])))
+;;    :final-generator nil
+;;    :perf nil
+;;    :nemesis (:nemesis nem-pkg)})
