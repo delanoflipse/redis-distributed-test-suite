@@ -1,0 +1,22 @@
+01 812 Fail :strong-snapshot-isolation (:strong-serializable) G-nonadjacent-realtime {3 : lost: 3.7037037037037033%, recovered: 100.0%, final contained: 77.77777777777779%, final duplicates: 0 [], found: {18}}
+02 757 Fail :read-atomic :read-committed (...) G-nonadjacent-realtime, incompatible-order {4 : lost: 1.4925373134328357%, recovered: 100.0%, final contained: 98.50746268656717%, final duplicates: 0 [], found: {45}}
+03 487 Fail :read-atomic :read-committed (...) G-nonadjacent-realtime, incompatible-order {4 : lost: 4.166666666666666%, recovered: 100.0%, final contained: 95.83333333333334%, final duplicates: 0 [], found: {1, 2}}
+04 235 Ok
+05 655 Ok
+06 008 Ok
+07 669 Ok
+08 742 Ok
+09 619 Ok
+10 104 Fail :read-atomic :read-committed (...) G-nonadjacent-realtime, incompatible-order(x2) {5 : lost: 9.45945945945946%, recovered: 100.0%, final contained: 89.1891891891892%, final duplicates: 0 [], found: {1, 2, 3, 4, 5, 6, 84}}{1 : lost: 14.285714285714285%, recovered: 100.0%, final contained: 42.857142857142854%, final duplicates: 0 [], found: {1}}
+11 344 Fail :strong-snapshot-isolation (:strong-serializable) G-nonadjacent-realtime {3 : lost: 3.7037037037037033%, recovered: 100.0%, final contained: 96.29629629629629%, final duplicates: 0 [], found: {14}}
+12 595 Ok
+13 921 Fail :read-atomic :read-committed (...) G-nonadjacent-realtime, incompatible-order
+14 058 Ok
+15 473 Fail :read-atomic :read-committed (...) G0-realtime, G-single-realtime, incompatible-order {4 : lost: 4.10958904109589%, recovered: 100.0%, final contained: 91.78082191780823%, final duplicates: 0 [], found: {56, 57, 55}}
+16 209 Ok
+17 459 Fail :strong-snapshot-isolation (:strong-serializable) G-single-realtime
+18 128 Fail :read-atomic :read-committed (...) G-nonadjacent-realtime, incompatible-order
+19 049 Fail :strong-snapshot-isolation (:strong-serializable) G-nonadjacent-realtime
+20 541 Fail :read-atomic :read-committed (...) G-nonadjacent-realtime, incompatible-order
+
+11/20 failed

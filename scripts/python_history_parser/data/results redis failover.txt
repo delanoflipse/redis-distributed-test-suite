@@ -1,0 +1,25 @@
+01 644 Fail
+02 572 Fail
+03 215 Fail
+04 072 Fail
+05 340 Fail
+06 095 Fail
+07 803 Fail
+08 090 Fail
+09 504 Fail
+10 505 Fail
+11 178 Fail
+12 292 Fail
+13 844 Fail
+14 042 Ok
+15 655 Fail
+16 412 Fail
+17 545 Fail
+18 636 Fail
+19 555 Fail
+20 431 Fail
+
+Total stale reads:  151  /  4278
+Total lost writes:  1
+Total doubled writes 0
+ok/invoke:  11887  /  8599
