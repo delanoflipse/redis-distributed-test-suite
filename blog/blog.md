@@ -1,5 +1,5 @@
 # Testing consistency for Redis and KeyDB Cluster modes with the Jepsen Framework.
-
+![Redislike Databases](redislike.png)
 ## Redis and KeyDB
 Redis is a widely used in-memory key-value database. It is popular due to its fast performance, ease of use and versatility. Large companies like Github, StackOverflow and Twitter use it successfully in production.
 
@@ -84,21 +84,20 @@ The ‘incompatible-order’ cause is one that is not detected via a cycle but c
 Based on these violations Elle found it seems that Redis and KeyDB do not uphold strong consistency guarantees. We must note that there is a possibility that our interaction with or implementation of Jedis is introducing faults that are attributed to the system. The Jedis client is extensive in features and might have fault preventions built in that might introduce some inconsistencies.
 
 
-Conclusions
+## Conclusions
 In general, we still see some of the issues that Redis Sentinel had back in 2013, namely lost writes. This means that the system does not have the same consistency as a single node. This is to be expected, as this is what the Redis documentation [describes](https://redis.io/docs/management/scaling/). Overall, the system does seem less prone to split-brain scenarios and other issues as it was in 2013, which is a good improvement. This might be a bit hand-wavy, but Redis seems to have made good improvements in terms of sturdiness. To draw this conclusion more firmly we would also need to run this test suite on the Redis Sentinel version tested in 2013.
 
 Furthermore, we have no reason to believe that Redis and KeyDB have a different level of consistency. Our results show some deviation in failure rates, but this difference can very well rely on chance alone due to the small sample size. Although this test is by far not exhaustive, it does seem that KeyDB can be a good drop-in replacement for Redis.
 
+## Reflection
+What is interesting though is the discrepancies between what Redis supports in terms of consistency, and how it is used. [A 2016 survey by Redis](https://redis.com/blog/the-results-are-in-redis-usage-survey-2016/) shows that Redis is used for:
 
+- Cache (63%)
+- Session store (50%)
+- Job/Queue management (38%)
+- Distributed locking (15%)
 
-Reflection
-What is interesting though is the discrepancies between what Redis supports in terms of consistency, and how it is used. A survey in 2016 shows that Redis is used for:
-Cache (63%)
-Session store (50%)
-Job/Queue management (38%)
-Distributed locking (15%)
-
-We agree with the  assessment of [Kyle Kingsbury in 2013](https://aphyr.com/posts/283-call-me-maybe-redis) that Redis is a great cache database. But when using Redis as a queue management,  it must be allowed behavior that some writes will get lost under faulty conditions. This becomes even more important when used as a primary database.
+We agree with the assessment of [Kyle Kingsbury in 2013](https://aphyr.com/posts/283-call-me-maybe-redis) that Redis is a great cache database. But when using Redis as a queue management,  it must be allowed behavior that some writes will get lost under faulty conditions. This becomes even more important when used as a primary database.
 
 Now, you might be wondering: “Is this really an issue?”. Well, the same survey shows that 67% of respondents store data in Redis which is not stored anywhere else. It even ends on the note that this number increased.
 
@@ -110,6 +109,4 @@ Our assessment is that if you plan to use Redis or KeyDB in a scalable environme
 Our test suite allows for a lot of different configurations, but due to time constraints it was not possible to do a thorough test for every combination of parameters.
 
 
-Testing other faults and scenarios could allow us to catch even more anomalies. One scenario we have put some work into but were not able to finish was removing nodes from the cluster and later adding them back in. The difficulty we ran into was twofold. One: when removing a primary all its hash slots first need to be moved to another primary before it can be removed. Two: it was difficult to figure out which nodes were primaries and which replicas and take the respective actions. A network fault we would have liked to inject were packet drops and delayed, however these proved to be difficult, some of the methods we tried did not work because we could not load the required kernel models in docker on WSL.
-
-
+Testing other faults and scenarios could allow us to catch even more anomalies. One scenario we have put some work into, but were unable to finish was removing nodes from the cluster and later adding them back in. The difficulty we ran into was twofold. One: when removing a primary, all its hash slots first need to be moved to another primary before it can be removed. Two: it was difficult to figure out which nodes were primaries and which replicas and take the respective actions. A network fault we would have liked to inject were packet drops and delayed, however these proved to be difficult, some of the methods we tried did not work because we could not load the required kernel models in docker on WSL.
