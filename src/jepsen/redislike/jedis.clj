@@ -5,6 +5,8 @@
 
 (defn as-host-and-port! [node port] (HostAndPort. (net/ip node) port))
 
+;; TODO: For some reason, Jedis clients are remade and a "Could not initialize cluster slots cache." is thrown.
+;; We were not able to solve this problem, would probably involve some unreadable code as we are using Java in clojure.
 (defn connect! [node test]
   (let [c (apply hash-set [(as-host-and-port! node (:port test))])]
     (JedisCluster. c (int (:client-timeout test)) (int (:client-max-retries test)))))
