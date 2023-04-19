@@ -1,0 +1,27 @@
+redis failover retry
+
+01 631 Fail
+02 768 Fail
+03 009 Fail
+04 150 Fail
+05 538 Fail
+06 855 Fail
+07 259 Fail
+08 296 Fail
+09 269 Fail
+10 046 Fail
+11 191 Fail
+12 443 Fail
+13 275 Fail
+14 981 Ok
+15 347 Fail
+16 919 Fail
+17 534 Fail
+18 400 Fail
+19 458 Fail
+20 513 Fail (duplicate) :read-atomic :read-uncommitted (...) 
+
+Total stale reads:  165  /  4271
+Total lost writes:  7
+Total doubled writes 3
+ok/invoke:  11703  /  8609

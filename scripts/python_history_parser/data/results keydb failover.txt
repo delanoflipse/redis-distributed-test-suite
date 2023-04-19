@@ -1,0 +1,26 @@
+01 926 Fail
+02 227 Fail
+03 720 Fail
+04 065 Fail
+05 573 Fail
+06 560 Fail
+07 178 Fail
+08 923 Fail
+09 499 Fail
+10 132 Fail
+11 819 Fail
+12 190 Fail
+13 855 Ok other error
+14 282 Fail
+15 752 Fail
+16 393 Fail
+17 805 Fail
+18 208 Fail
+19 648 Fail
+20 899 Fail
+21 699 Fail
+
+Total stale reads:  248  /  4216
+Total lost writes:  8
+Total doubled writes 0
+ok/invoke:  11844  /  8545

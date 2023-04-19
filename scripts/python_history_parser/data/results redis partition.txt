@@ -1,0 +1,22 @@
+01 827 Ok
+02 140 Fail :strong-snapshot-isolation (:strong-serializable) G-nonadjacent-realtime
+03 977 Ok
+04 835 Ok
+05 170 Ok
+06 567 Fail :read-atomic :read-committed (...) G-nonadjacent-realtime, incompatible-order
+07 722 Fail :strong-snapshot-isolation (:strong-serializable) G-nonadjacent-realtime
+08 163 Ok
+09 409 Ok
+10 102 Ok
+11 273 Fail :read-atomic :read-committed (...) G-nonadjacent-realtime, incompatible-order(x3)
+12 783 Fail :read-atomic :read-committed (...) G1c-realtime, G-single-realtime, incompatible-order
+13 138 Ok
+14 939 Fail :read-atomic :read-committed (...) G-nonadjacent-realtime, incompatible-order
+15 187 Ok
+16 227 Fail :read-atomic :read-committed (...) G-nonadjacent-realtime, incompatible-order {4 : lost: 2.4390243902439024%, recovered: 100.0%, final contained: 97.5609756097561%, final duplicates: 0 [], found: {20}} {5 : lost: 2.9702970297029703%, recovered: 100.0%, final contained: 97.02970297029702%, final duplicates: 0 [], found: {1, 2, 3}} {2 : lost: 7.6923076923076925%, recovered: 100.0%, final contained: 84.61538461538461%, final duplicates: 0 [], found: {1}} {1 : lost: 14.285714285714285%, recovered: 100.0%, final contained: 57.14285714285714%, final duplicates: 0 [], found: {1}}
+17 640 Ok
+18 841 Fail :read-atomic :read-committed (...) G-nonadjacent-realtime, incompatible-order(x2) {5 : lost: 10.38961038961039%, recovered: 100.0%, final contained: 83.11688311688312%, final duplicates: 0 [], found: {1, 2, 3, 43, 45, 46, 48, 49}} {4 : lost: 7.017543859649122%, recovered: 100.0%, final contained: 91.22807017543859%, final duplicates: 0 [], found: {56, 57, 58, 55}} {2 : lost: 22.22222222222222%, recovered: 100.0%, final contained: 66.66666666666666%, final duplicates: 0 [], found: {8, 9, 10, 7}}
+19 786 Fail :read-atomic :read-committed (...) G-nonadjacent-realtime, incompatible-order {3 : lost: 17.24137931034483%, recovered: 100.0%, final contained: 82.75862068965517%, final duplicates: 0 [], found: {13, 14, 15, 16, 17}}
+20 321 Ok?Fail? elle dir but no other. my script okay
+
+9/20 failed
