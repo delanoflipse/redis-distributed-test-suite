@@ -43,6 +43,8 @@ cd redis-cluster # or other path to test suite.
 lein run test -c 9 # there are many other options, see core.clj
 ```
 
+If on the first try it gives some weird errors, just try again. Sometimes the synchronize timeout runs out, and everything breaks. Also, the first run will be really slow, as everything has to be installed and built. But once you've got it working, further iterations will be faster.
+
 ## Included scripts
 
 We provide a few scripts. One of them will rename test runs to make it easier to find failed runs. You can run it with:
