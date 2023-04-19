@@ -1,6 +1,6 @@
 # Jepsen.Redislike
 
-A [Jepsen](https://github.com/jepsen-io/jepsen) test for redis and redislike (KeyDB) databases using the [Elle consistency checker](https://github.com/jepsen-io/elle).
+A [Jepsen](https://github.com/jepsen-io/jepsen) test for Redis and Redislike (KeyDB) databases using the [Elle consistency checker](https://github.com/jepsen-io/elle).
 
 You can read [our blogpost about this project](blog/blog.md) here.
 
