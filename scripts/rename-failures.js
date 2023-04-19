@@ -1,4 +1,11 @@
-// renames runs with errors (e.g. contain a elle folder) so we can easily find them
+/**
+ * Renames runs with errors (e.g. contain a elle folder) so we can easily find them.
+ * Requires node v18+.
+ * This is clearly a utility script to automate manual inspection.
+ * So no, you don't get a package.json, and certainly no support.
+ * 
+ * And yes, we have scripts in python AND javascript in a clojure project.
+ */
 const { readdir, rename, readFile, access } = require("fs/promises");
 
 const path = require("path");
@@ -8,7 +15,6 @@ const forceFlag = process.argv[2] === "-f";
 const STORE_DIR = path.join(
   __dirname,
   "../",
-  "jepsen.redis-like",
   "store",
   "redislike"
 );

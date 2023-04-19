@@ -11,17 +11,17 @@
             [jepsen.os.debian :as debian]
             [slingshot.slingshot :refer [try+ throw+]]))
 
-;; generic configuration
+;; CONSTANTS
 (def working-dir "/opt/db")
 (def db-file "db.rdb")
 (def checkout-root-dir "/repos")
 (def build-file
   "A file we create to track the last built version; speeds up compilation."
   "jepsen-built-version")
-
 (def logfile (str working-dir "/db.log"))
 (def pidfile (str working-dir "/db.pid"))
 
+;; Per-database options
 (def db-defaults {:redis {:conf-file "redis.conf"
                           :db-binary "redis-server"
                           :db-cli "redis-cli"
@@ -36,14 +36,18 @@
                           :build-repository-version "478ed26"}})
 
 
-(defn db-opts! [args]
-  "Generate options based on database name"
+;; --- Database configuration utilities ---
+(defn db-opts!
+  "Inject inferred options, mostly based on database choice"
+  [args]
   (let [defaults (get db-defaults (keyword (:database args)) (:redis db-defaults))
         build-repository-path (str checkout-root-dir "/" (:build-repository-name defaults))]
     (merge defaults {:build-repository-path  build-repository-path
                      :build-full-path  (str build-repository-path "/" (:build-repository-version defaults))})))
 
-;; procedures
+;; --- Database build utilities ---
+;; Most of the installation tools were adopted from https://github.com/jepsen-io/redis/blob/54ab5c10ace229fc780e43e188ef1b64c3a32ee4/src/jepsen/redis/db.clj
+;; Building 9x redis on every test run is a waste of time and energy.
 (defn install-tools!
   "Installs prerequisite packages for building redis and keybdb."
   []
@@ -74,6 +78,7 @@
   (util/named-locks))
 
 (defmacro with-build-version
+  "Only run the body, containing the build process, once."
   [node repo-name version repo-path & body]
   `(util/with-named-lock build-locks [~node ~repo-name]
      (let [build-file# (str ~repo-path "/" build-file)]
@@ -89,9 +94,8 @@
            res#)))))
 
 (defn build-db!
-  "Compiles db, and returns the directory we built in."
+  "Compiles the node's database of choice, as defined in the arguments."
   [node args]
-
   (let [repo-name (:build-repository-name args)
         repo-version (:build-repository-version args)
         repo-path (:build-full-path args)]
@@ -104,21 +108,21 @@
               (c/exec :make))))))
 
 (defn deploy-binaries!
-  "Uploads binaries built from the given directory."
+  "Moves built binaries from the given directory to the working directory."
   [build-dir executables]
   (c/exec :mkdir :-p working-dir)
   (doseq [f executables]
     (c/exec :cp (str build-dir "/src/" f) (str working-dir "/"))
     (c/exec :chmod "+x" (str working-dir "/" f))))
 
-
 ;; Database definition
 (defn db
   "Redis-like DB for a particular version."
   []
   (reify db/DB
+    ;; Build and setup a Redis Cluster. See https://redis.io/docs/management/scaling/ for more information
     (setup! [this test node]
-      (info node "installing DB")
+      (info node "setting up DB...")
       (c/su
        (info "installing tools")
        (install-tools!)
@@ -133,6 +137,7 @@
 
        (info "writing config")
        (c/cd working-dir
+            ;;  This could be extended to test multiple configurations
              (cu/write-file! (str "
 port " (:port test) "
 cluster-enabled yes
@@ -143,9 +148,11 @@ appendonly yes
 # appendfsync always
                      ") (:conf-file test)))
 
+       ;; We have now everything we need to start the database
        (db/start! this test node)
        (Thread/sleep 1000)
        (jepsen/synchronize test 10000)
+       ;; Give every node the time to start up
        (info "all servers started")
 
        (if (= node (jepsen/primary test))
@@ -153,6 +160,8 @@ appendonly yes
          (let [nodes-urls (str/join " " (map p-util/node-url (:nodes test) (repeat (:port test))))]
            (info "Creating primary cluster" nodes-urls)
            (c/cd working-dir
+                 ;; Run te command to start the cluster.
+                 ;; Not sure why this couldn't be included in the configuration file, many DB's seem to have this.
                  (c/exec (c/lit (str "./" (:db-cli test))) :--cluster :create (c/lit nodes-urls) :--cluster-yes :--cluster-replicas (:replicas test)))
            (info "Main init done, syncing...")
            (jepsen/synchronize test))
@@ -162,7 +171,7 @@ appendonly yes
            (jepsen/synchronize test)
            (info "Waiting for secondary to join...")
            (Thread/sleep 2000)))
-
+       ;; Everyone is up and running!
        (Thread/sleep 2000)
        (info "Synced")))
 
@@ -187,14 +196,13 @@ appendonly yes
         :--dbfilename             db-file
         :--loglevel                 "debug")))
 
-    (kill! [this test node]
+    (kill! [_ test _]
       (c/su
        (cu/stop-daemon! (:db-binary test) pidfile)))
 
     db/Pause
-    (pause!  [_ test node] (c/su (cu/grepkill! :stop (:db-binary test))))
-    (resume! [_ test node] (c/su (cu/grepkill! :cont (:db-binary test))))
+    (pause!  [_ test _] (c/su (cu/grepkill! :stop (:db-binary test))))
+    (resume! [_ test _] (c/su (cu/grepkill! :cont (:db-binary test))))
 
     db/LogFiles
-    (log-files [_ test node]
-      [logfile])))
+    (log-files [_ _ _] [logfile])))
