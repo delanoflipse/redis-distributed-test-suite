@@ -1,6 +1,5 @@
 (ns jepsen.redislike.nemesis
   (:require [clojure.tools.logging :refer [info warn]]
-            [elle.list-append :as a]
             [jepsen
              [control :as c]
              [checker :as checker]
@@ -16,10 +15,10 @@
              [util :as p-util]]
             [jepsen.nemesis [time :as nt]
              [combined :as nc]]
-            [jepsen.os.debian :as debian]
-            [jepsen.tests.cycle.append :as append])
+            [jepsen.os.debian :as debian])
   (:use clojure.pprint))
 
+;; Our own nemesis, slightly broken when we re-introduced Jepsen's generated tests
 (defn my-nemesis
   "Adds and removes nodes from the cluster."
   []
@@ -77,29 +76,19 @@
 				;;(gen/sleep 10)
                                    ]))))
 
+;; Jepsen has this combined suite of nemesis, based on reflection of the database
+;; be careful, the opts has to contain the database in (:db opts), otherwise the reflection fails.
+;; Checkout compose-packages for the included test, we've put most of them in core/possible-faults
 (defn package-for
   "Builds a combined package for the given options."
   [opts]
-  (let [nem-opts (nc/compose-packages (nc/nemesis-packages opts))]  
-    (info "has kill?" (some #{:kill :pause} (:faults opts)))
-                                                (info "has kill proto?" (satisfies? db/Process (:db opts)))                       
-                                                (info "has kill kill again?" (contains? (:faults opts) :kill))                       
-                                                                      
-                                                                      nem-opts
-                                                                      ))
+  (let [nem-opts (nc/compose-packages (nc/nemesis-packages opts))] nem-opts))
 
+;; Let jepsen create the test suite for you. Don't reinvent the wheel.
 (defn nemesis [opts]
-  (let [nem-pkg (package-for opts) ] {:generator (:generator nem-pkg)
+  ;; This does pretty much only call package-for
+  ;; But if you want to inject your own test, this is the place
+  (let [nem-pkg (package-for opts)] {:generator (:generator nem-pkg)
                                      :final-generator (:final-generator nem-pkg)
                                      :perf (:perf nem-pkg)
                                      :nemesis (:nemesis nem-pkg)}))
-
-;; (defn single-nemesis [opts db]
-;;   {:generator (:generator (gen/nemesis
-;;                            (cycle [(gen/sleep 5)
-;;                                    {:type :info, :f :start}
-;;                                    (gen/sleep 5)
-;;                                    {:type :info, :f :stop}])))
-;;    :final-generator nil
-;;    :perf nil
-;;    :nemesis (:nemesis nem-pkg)})
