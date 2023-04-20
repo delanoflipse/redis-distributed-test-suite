@@ -1,0 +1,41 @@
+
+install Graphviz else file not found exeption
+
+run elle check against file (no empty lines allowed):
+clj -X read/main :file "test_history.edn"
+
+
+run elle menualy from REPL
+clojars repl: clj
+example:
+
+(require '[elle.list-append :as a]
+            '[jepsen.history :as h])
+
+(require '[clojure.java.io :as io] '[clojure.edn :as edn])
+// read one line
+(edn/read (java.io.PushbackReader. (io/reader "test_history.edn")))
+
+// read line by line
+(def file (java.io.PushbackReader. (io/reader "test_history.edn")))
+(edn/read file)
+(edn/read file) ...
+
+// all lines
+(def hist
+ (with-open [rdr (clojure.java.io/reader "test_history.edn")]
+  (into []
+   (for [line (line-seq rdr)]
+    (edn/read-string line)
+   )
+  )
+ )
+)
+(def h (h/history hist))
+
+(def h (h/history
+            [{:process 0, :type :ok, :value [[:append :x 1] [:r :y [1]]]}
+             {:process 1, :type :ok, :value [[:append :x 2] [:append :y 1]]}
+             {:process 2, :type :ok, :value [[:r :x [1 2]]]}]))
+
+(pprint (a/check {:consistency-models [:serializable], :directory "out"} h))
