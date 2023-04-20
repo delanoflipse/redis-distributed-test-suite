@@ -52,7 +52,11 @@ We provide a few scripts. One of them will rename test runs to make it easier to
 node scripts/rename-failures.js # might need sudo
 ```
 
-We also include a custom history parser to calculate lost writes.
+We also include a custom history parser to calculate lost writes. To run it first copy the folders in `store/redislike/` to `scripts/python_history_parser/store/`. Than you can the run script to analyze the copyed historys with:
+```sh
+cd scripts/python_history_parser
+parse.py
+```
 
 ## Issues
 
